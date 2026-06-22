@@ -1,0 +1,15 @@
+{
+	"luci-app-eventcenter": {
+		"description": "Event Center",
+		"read": {
+			"ubus": {
+				"luci": ["*"]
+			}
+		},
+		"write": {
+			"ubus": {
+				"luci": ["*"]
+			}
+		}
+	}
+}

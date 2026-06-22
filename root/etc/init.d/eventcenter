@@ -1,0 +1,68 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=10
+
+USE_PROCD=1
+
+WATCHER_PID_FILE="/tmp/eventcenter_watcher.pid"
+
+start_service() {
+    local enable
+    enable=$(uci -q get eventcenter.global.enable)
+    [ "$enable" != "1" ] && return
+
+    # --- Cron job setup ---
+    local interval
+    interval=$(uci -q get eventcenter.@monitor[0].interval || echo "5")
+    [ -z "$interval" ] && interval=5
+
+    local cron_expr
+    if [ "$interval" -ge 60 ] 2>/dev/null && [ $(( interval % 60 )) -eq 0 ] 2>/dev/null; then
+        local hours=$(( interval / 60 ))
+        cron_expr="0 */${hours} * * *"
+    else
+        cron_expr="*/${interval} * * * *"
+    fi
+
+    grep -q 'eventcenter' /etc/crontabs/root 2>/dev/null || {
+        echo "${cron_expr} /usr/bin/eventcenter check openclash" >> /etc/crontabs/root
+    }
+
+    # --- Watcher setup ---
+    local realtime
+    realtime=$(uci -q get eventcenter.@monitor[0].realtime 2>/dev/null)
+    if [ "$realtime" = "1" ]; then
+        # Check if watcher is already running
+        if [ -f "$WATCHER_PID_FILE" ] && kill -0 "$(cat "$WATCHER_PID_FILE")" 2>/dev/null; then
+            logger -t eventcenter "watcher already running (pid=$(cat "$WATCHER_PID_FILE"))"
+        else
+            /usr/share/eventcenter/watcher.sh &
+            logger -t eventcenter "watcher started (realtime mode)"
+        fi
+    fi
+
+    logger -t eventcenter "service started (interval=${interval}min, realtime=${realtime:-off})"
+}
+
+stop_service() {
+    # Stop watcher
+    if [ -f "$WATCHER_PID_FILE" ]; then
+        local _pid
+        _pid=$(cat "$WATCHER_PID_FILE")
+        if kill -0 "$_pid" 2>/dev/null; then
+            kill -TERM "$_pid" 2>/dev/null
+            logger -t eventcenter "watcher stopped (pid=$_pid)"
+        fi
+        rm -f "$WATCHER_PID_FILE"
+    fi
+
+    # Remove cron tasks
+    sed -i '/eventcenter/d' /etc/crontabs/root
+    logger -t eventcenter "service stopped"
+}
+
+reload_service() {
+    stop_service
+    start_service
+}

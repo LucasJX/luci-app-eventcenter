@@ -1,0 +1,33 @@
+{
+	"admin/services/eventcenter": {
+		"title": "事件中心",
+		"order": 90,
+		"action": {
+			"type": "firstchild"
+		}
+	},
+	"admin/services/eventcenter/overview": {
+		"title": "概览",
+		"order": 10,
+		"action": {
+			"type": "view",
+			"path": "eventcenter/overview"
+		}
+	},
+	"admin/services/eventcenter/settings": {
+		"title": "设置",
+		"order": 20,
+		"action": {
+			"type": "view",
+			"path": "eventcenter/settings"
+		}
+	},
+	"admin/services/eventcenter/logs": {
+		"title": "日志",
+		"order": 30,
+		"action": {
+			"type": "view",
+			"path": "eventcenter/logs"
+		}
+	}
+}

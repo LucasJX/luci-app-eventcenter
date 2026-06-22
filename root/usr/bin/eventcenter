@@ -1,0 +1,95 @@
+#!/bin/sh
+# Event Center - Main CLI Entry Point
+# /usr/bin/eventcenter
+#
+# Usage:
+#   eventcenter emit <source> <event> <level> <title> [message]
+#   eventcenter list [--limit N]
+#   eventcenter test
+#   eventcenter status
+#   eventcenter check <source>
+#   eventcenter dedup-clear
+#   eventcenter help
+
+# Source engine (which sources utils.sh)
+. /usr/share/eventcenter/engine.sh
+
+# Print usage
+usage() {
+    cat <<'EOF'
+Event Center - Event monitoring and notification system
+
+Usage:
+  eventcenter emit <source> <event> <level> <title> [message]
+  eventcenter list [--limit N]
+  eventcenter test
+  eventcenter status
+  eventcenter check <source>
+  eventcenter sources
+  eventcenter dedup-clear
+  eventcenter help
+
+Commands:
+  emit          Send an event through the pipeline
+  list          Show event log (newest first)
+  test          Send a test notification
+  status        Show service status
+  check         Run an event source check
+  sources       List available event sources
+  dedup-clear   Clear the dedup cache
+  help          Show this help
+
+Levels:
+  info, warn, error, critical
+
+Examples:
+  eventcenter emit openclash config_change info "Config Updated" "main.yaml was modified"
+  eventcenter list --limit 20
+  eventcenter check openclash
+  eventcenter sources
+EOF
+}
+
+# Main command dispatcher
+case "$1" in
+    emit)
+        shift
+        engine_emit "$1" "$2" "$3" "$4" "$5"
+        ;;
+    list)
+        shift
+        _limit=""
+        if [ "$1" = "--limit" ] && [ -n "$2" ]; then
+            _limit="$2"
+        fi
+        log_read "$_limit"
+        ;;
+    test)
+        engine_test
+        ;;
+    status)
+        service_status
+        ;;
+    check)
+        shift
+        engine_check "$1"
+        ;;
+    sources)
+        engine_sources_list
+        ;;
+    dedup-clear)
+        dedup_clear
+        echo "Dedup cache cleared."
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    "")
+        usage
+        ;;
+    *)
+        echo "Unknown command: $1" >&2
+        echo "Run 'eventcenter help' for usage." >&2
+        exit 1
+        ;;
+esac
