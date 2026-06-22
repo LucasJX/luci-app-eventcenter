@@ -68,10 +68,6 @@ prepend_flag() {
 
 # --- Clash API helpers ---
 
-get_clash_secret() {
-    uci -q get openclash.config.dashboard_password 2>/dev/null
-}
-
 get_clash_port() {
     local _ec_port
     _ec_port=$(grep -o 'external-controller:[^:]*:\([0-9]*\)' /etc/openclash/config/*.yaml 2>/dev/null | head -1 | grep -o '[0-9]*$')
@@ -79,27 +75,25 @@ get_clash_port() {
 }
 
 fetch_proxies_json() {
-    local _secret _port _url _hdr
-    _secret=$(get_clash_secret)
+    local _port _url _hdr
     _port=$(get_clash_port)
     _url="http://127.0.0.1:${_port}/proxies"
-    _hdr="Authorization: Bearer ${_secret}"
-
+    _hdr=$(/usr/share/eventcenter/auth_header.sh)
     curl -s -m 10 -H "$_hdr" "$_url" 2>/dev/null
+}/proxies"
+    _hdr="Authorization: Bearer ***    curl -s -m 10 -H "$_hdr" "$_url" 2>/dev/null
 }
 
 # test_node_delay <node_name>
 # Returns delay in ms, or "timeout" if unreachable
 test_node_delay() {
-    local _node="$1" _secret _port _url _test_url _timeout _hdr _result _delay
-    _secret=$(get_clash_secret)
+    local _node="$1" _port _url _test_url _timeout _hdr _result _delay
     _port=$(get_clash_port)
     _test_url=$(ec_uci_get "node_health.test_url" "http://www.gstatic.com/generate_204")
     _timeout=$(ec_uci_get "node_health.delay_threshold" "3000")
-    _hdr="Authorization: Bearer ${_secret}"
+    _hdr=$(/usr/share/eventcenter/auth_header.sh)
 
-    local _encoded
-    _encoded=$(printf '%s' "$_node" | sed 's/ /%20/g; s/&/%26/g; s/+/%2B/g; s/,/%2C/g; s/:/%3A/g; s/;/%3B/g; s/=/%3D/g; s/?/%3F/g; s/@/%40/g')
+    local _encoded=$(printf '%s' "$_node" | sed 's/ /%20/g; s/&/%26/g; s/+/%2B/g; s/,/%2C/g; s/:/%3A/g; s/;/%3B/g; s/=/%3D/g; s/?/%3F/g; s/@/%40/g')
 
     _url="http://127.0.0.1:${_port}/proxies/${_encoded}/delay?timeout=${_timeout}&url=${_test_url}"
 
@@ -125,12 +119,37 @@ extract_urltest_groups() {
     done
 }
 
+# group_in_filter <group_name>
+# Returns 0 if group should be monitored (empty filter = all)
+group_in_filter() {
+    local _group="$1" _filter
+    _filter=$(ec_uci_get "node_health.monitor_groups" "")
+    [ -z "$_filter" ] && return 0  # empty = monitor all
+    echo "$_filter" | tr ',' '\n' | fgrep -qF "$_group"
+}
+
+# record_latency <group> <node> <delay_ms>
+record_latency() {
+    local _group="$1" _node="$2" _delay="$3" _latency_file
+    _latency_file="/etc/eventcenter/latency_history"
+    mkdir -p /etc/eventcenter 2>/dev/null
+    local _ts
+    _ts=$(date '+%Y-%m-%d %H:%M:%S')
+    printf '%s\t%s\t%s\t%s\n' "$_ts" "$_group" "$_node" "$_delay" >> "$_latency_file"
+    # Keep last 1000 entries
+    if [ "$(wc -l < "$_latency_file" 2>/dev/null)" -gt 1000 ]; then
+        tail -500 "$_latency_file" > "${_latency_file}.tmp"
+        mv "${_latency_file}.tmp" "$_latency_file"
+    fi
+}
+
 # --- Main check ---
 
 check() {
     local _state_file _failed_file
     _state_file=$(ec_uci_get "node_health.state_file" "/tmp/eventcenter_node_state")
-    _failed_file="/tmp/eventcenter_node_failed"
+    _failed_file="/etc/eventcenter/failed_nodes"
+    mkdir -p /etc/eventcenter 2>/dev/null
 
     local _enable
     _enable=$(ec_uci_get "node_health.enable" "0")
@@ -162,11 +181,15 @@ check() {
 
     # First run: save baseline, don't notify
     if [ ! -f "$_state_file" ]; then
-        cat "$_tmp_current" > "$_state_file"
+        cp "$_tmp_current" "${_state_file}.tmp" && mv "${_state_file}.tmp" "$_state_file"
         logger -t eventcenter "node-health: baseline saved ($(wc -l < "$_tmp_current") groups)"
         rm -f "$_tmp_current" "$_tmp_old"
         return 0
     fi
+
+    # Check if recovery notification is enabled
+    local _notify_recovery
+    _notify_recovery=$(ec_uci_get "node_health.notify_recovery" "1")
 
     # Compare current vs old, detect failovers and recoveries
     local _tmp_failovers="/tmp/ec_health_failovers_$$"
@@ -176,6 +199,9 @@ check() {
 
     while IFS=$(printf '\t') read -r _group _current_node; do
         [ -z "$_group" ] || [ -z "$_current_node" ] && continue
+
+        # Group filter
+        group_in_filter "$_group" || continue
 
         local _old_node
         _old_node=$(fgrep -F "${_group}$(printf '\t')" "$_tmp_old" 2>/dev/null | cut -f2)
@@ -188,22 +214,36 @@ check() {
         local _delay
         _delay=$(test_node_delay "$_old_node")
 
+        # Record latency for current node
+        local _current_delay
+        _current_delay=$(test_node_delay "$_current_node")
+        [ "$_current_delay" != "timeout" ] && record_latency "$_group" "$_current_node" "$_current_delay"
+
         if [ "$_delay" = "timeout" ]; then
-            # Failover: old node unreachable
-            printf '%s\t%s\t%s\n' "$_group" "$(prepend_flag "$_old_node")" "$(prepend_flag "$_current_node")" >> "$_tmp_failovers"
-            # Record failed node for recovery tracking
-            echo "${_group}$(printf '\t')${_old_node}" >> "$_failed_file"
+            # Failover: old node unreachable — dedup by group:old_node
+            local _dedup_key
+            _dedup_key=$(printf '%s:%s' "$_group" "$_old_node" | md5sum 2>/dev/null | cut -d' ' -f1)
+            if dedup_check "node_failover" "$_dedup_key" 2>/dev/null; then
+                printf '%s\t%s\t%s\n' "$_group" "$(prepend_flag "$_old_node")" "$(prepend_flag "$_current_node")" >> "$_tmp_failovers"
+            fi
+            # Record failed node for recovery tracking (append if not exists)
+            if ! fgrep -qF "${_group}$(printf '\t')${_old_node}" "$_failed_file" 2>/dev/null; then
+                echo "${_group}$(printf '\t')${_old_node}" >> "$_failed_file"
+            fi
         else
-            # Node changed but old node is still reachable — likely manual switch or mihomo routine
+            # Node changed but old node is still reachable
             # Check if this is a recovery (node was previously failed)
-            if [ -f "$_failed_file" ] && fgrep -qF "${_group}$(printf '\t')${_current_node}" "$_failed_file" 2>/dev/null; then
-                # Recovery: previously failed node is back
-                printf '%s\t%s\t%s\n' "$_group" "$(prepend_flag "$_old_node")" "$(prepend_flag "$_current_node")" >> "$_tmp_recoveries"
+            if [ "$_notify_recovery" = "1" ] && [ -f "$_failed_file" ] && fgrep -qF "${_group}$(printf '\t')${_current_node}" "$_failed_file" 2>/dev/null; then
+                # Recovery: previously failed node is back — dedup by group:node
+                local _dedup_key_r
+                _dedup_key_r=$(printf '%s:%s:recovery' "$_group" "$_current_node" | md5sum 2>/dev/null | cut -d' ' -f1)
+                if dedup_check "node_recovery" "$_dedup_key_r" 2>/dev/null; then
+                    printf '%s\t%s\t%s\n' "$_group" "$(prepend_flag "$_old_node")" "$(prepend_flag "$_current_node")" >> "$_tmp_recoveries"
+                fi
                 # Remove from failed list
                 fgrep -vF "${_group}$(printf '\t')${_current_node}" "$_failed_file" > "/tmp/ec_failed_tmp_$$" 2>/dev/null
                 mv "/tmp/ec_failed_tmp_$$" "$_failed_file"
             fi
-            # Otherwise: manual switch or routine — don't notify
         fi
     done < "$_tmp_current"
 
@@ -262,8 +302,8 @@ AWKEOFR
         rm -f "$_tmp_awk_r"
     fi
 
-    # Update state file
-    cat "$_tmp_current" > "$_state_file"
+    # Update state file (atomic write)
+    cp "$_tmp_current" "${_state_file}.tmp" && mv "${_state_file}.tmp" "$_state_file"
 
     # Cleanup
     rm -f "$_tmp_current" "$_tmp_old" "$_tmp_failovers" "$_tmp_recoveries"

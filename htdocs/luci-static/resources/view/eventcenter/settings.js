@@ -169,6 +169,16 @@ return view.extend({
 		o.default = 'http://www.gstatic.com/generate_204';
 		o.rmempty = false;
 
+		o = s.option(form.Flag, 'notify_recovery', '恢复通知',
+			'节点从故障中恢复时也发送通知');
+		o.default = '1';
+		o.rmempty = false;
+
+		o = s.option(form.Value, 'monitor_groups', '监控组过滤',
+			'只监控指定的代理组，逗号分隔。留空监控所有 url-test 组');
+		o.rmempty = true;
+		o.placeholder = '🇭🇰 香港节点,🇯🇵 日本节点';
+
 		return m.render();
 	}
 });
