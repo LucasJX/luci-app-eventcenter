@@ -114,7 +114,7 @@ build_notification() {
                 em[kv[1]] = kv[2]
             }
 
-            printf "🚀 *%s*\n\n📅 %s\n\n📦 *节点总数*\n%s → %s (%s)\n\n📊 *变更统计*\n➕ 新增线路 %s\n➖ 下线线路 %s\n🔄 参数更新 %s", title, ts, old, new, diff, added, removed, modified
+            printf "🟡📦 *%s*\n🟡━━━━━━━━━━━━━━━━━━\n📅 %s\n\n📦 *节点总数*\n%s → %s (%s)\n\n📊 *变更统计*\n➕ 新增线路 %s\n➖ 下线线路 %s\n🔄 参数更新 %s", title, ts, old, new, diff, added, removed, modified
 
             has_region = 0
             if (new_regions != "" || gone_regions != "" || regions != "") has_region = 1
