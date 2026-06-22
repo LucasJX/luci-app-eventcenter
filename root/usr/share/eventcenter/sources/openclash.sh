@@ -169,9 +169,14 @@ check_subscription() {
             in_p && /name:/ {
                 line=$0; sub(/.*name:[[:space:]]*/, "", line); sub(/,.*/, "", line); gsub(/[\047"]/, "", line)
                 if (line ~ /(剩余|到期|套餐|距离|故障|充值|流量|重置|过期|expire|traffic|reset|servername)/ || line == "") next
-                rest=$0; sub(/.*server:/, "", rest); sub(/,.*/, "", rest); server=rest
-                rest=$0; sub(/.*port:/, "", rest); sub(/,.*/, "", rest); port=rest
-                key = server ":" port; if (key == ":") { rest=$0; sub(/.*type:/, "t:", rest); sub(/,.*/, "", rest); key=rest }
+                server=""; port=""
+                n=split($0, fields, ",")
+                for (i=1; i<=n; i++) {
+                    gsub(/^[[:space:]]+/, "", fields[i])
+                    if (fields[i] ~ /^server:/) { sub(/.*server:[[:space:]]*/, "", fields[i]); server=fields[i] }
+                    if (fields[i] ~ /^port:/) { sub(/.*port:[[:space:]]*/, "", fields[i]); port=fields[i] }
+                }
+                key = server ":" port; if (key == ":") key = "unknown"
                 print line "\t" key
             }
         ' "$_pf" 2>/dev/null >> "$_tmp_current"
@@ -196,7 +201,7 @@ check_subscription() {
         # Save baseline
         local _tmp_state="${_state_file}.tmp"
         : > "$_tmp_state"
-        awk '{printf "nodehash:%s\t%s\n", $1, $2}' "$_tmp_current" >> "$_tmp_state"
+        awk -F'\t' '{printf "nodehash:%s\t%s\n", $1, $2}' "$_tmp_current" >> "$_tmp_state"
         mkdir -p "$(dirname "$_state_file")" 2>/dev/null
         mv "$_tmp_state" "$_state_file" 2>/dev/null
         rm -f "$_tmp_providers" "$_tmp_current" "$_tmp_old"
@@ -294,7 +299,7 @@ check_subscription() {
     # Update state file
     local _tmp_state="${_state_file}.tmp"
     : > "$_tmp_state"
-    awk '{printf "nodehash:%s\t%s\n", $1, $2}' "$_tmp_current" >> "$_tmp_state"
+    awk -F'\t' '{printf "nodehash:%s\t%s\n", $1, $2}' "$_tmp_current" >> "$_tmp_state"
     mkdir -p "$(dirname "$_state_file")" 2>/dev/null
     mv "$_tmp_state" "$_state_file" 2>/dev/null
 
