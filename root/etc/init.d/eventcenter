@@ -3,8 +3,6 @@
 START=99
 STOP=10
 
-USE_PROCD=1
-
 WATCHER_PID_FILE="/tmp/eventcenter_watcher.pid"
 
 start_service() {
@@ -28,15 +26,21 @@ start_service() {
         cron_expr="*/${interval} * * * *"
     fi
 
-    # Always update (remove old, add new)
-    sed -i '/eventcenter_check_openclash/d' /etc/crontabs/root 2>/dev/null
-    echo "${cron_expr} /usr/bin/eventcenter check openclash" >> /etc/crontabs/root
+    # Remove old eventcenter cron entries and add new ones
+    grep -v 'eventcenter_check' /etc/crontabs/root > /tmp/ec_cr_$$ 2>/dev/null
+    echo "${cron_expr} /usr/bin/eventcenter check openclash" >> /tmp/ec_cr_$$
+    cp /tmp/ec_cr_$$ /etc/crontabs/root
+    rm -f /tmp/ec_cr_$$
     logger -t eventcenter "openclash cron: ${cron_expr} (interval=${interval}min)"
 
     # --- Node health monitoring ---
     local health_enable
     health_enable=$(uci -q get eventcenter.@health[0].enable 2>/dev/null)
-    sed -i '/eventcenter_check_node_health/d' /etc/crontabs/root 2>/dev/null
+
+    # Always remove old health cron first
+    grep -v 'eventcenter_check_node_health' /etc/crontabs/root > /tmp/ec_crh_$$ 2>/dev/null
+    cp /tmp/ec_crh_$$ /etc/crontabs/root
+    rm -f /tmp/ec_crh_$$
 
     if [ "$health_enable" = "1" ]; then
         local health_interval
@@ -62,17 +66,19 @@ start_service() {
     local realtime
     realtime=$(uci -q get eventcenter.@monitor[0].realtime 2>/dev/null)
     if [ "$realtime" = "1" ]; then
-        # Check if watcher is already running
-        if [ -f "$WATCHER_PID_FILE" ] && kill -0 "$(cat "$WATCHER_PID_FILE")" 2>/dev/null; then
-            logger -t eventcenter "watcher already running (pid=$(cat "$WATCHER_PID_FILE"))"
-        else
-            /usr/share/eventcenter/watcher.sh &
-            logger -t eventcenter "watcher started (realtime mode)"
+        # Stop existing watcher first
+        if [ -f "$WATCHER_PID_FILE" ]; then
+            local _old_pid
+            _old_pid=$(cat "$WATCHER_PID_FILE")
+            kill "$_old_pid" 2>/dev/null
+            rm -f "$WATCHER_PID_FILE"
         fi
+        /usr/share/eventcenter/watcher.sh &
+        logger -t eventcenter "watcher started (realtime mode)"
     fi
 
-    # Reload cron (killall is faster than /etc/init.d/cron restart on OpenWrt)
-    killall crond 2>/dev/null; crond 2>/dev/null
+    # Reload cron
+    kill -HUP $(head -1 /var/run/crond.pid 2>/dev/null) 2>/dev/null
 
     logger -t eventcenter "service started (interval=${interval}min, realtime=${realtime:-off})"
 }
@@ -90,16 +96,17 @@ stop_service() {
     fi
 
     # Remove cron tasks
-    sed -i '/eventcenter_check_openclash/d' /etc/crontabs/root
-    sed -i '/eventcenter_check_node_health/d' /etc/crontabs/root
+    grep -v 'eventcenter_check' /etc/crontabs/root > /tmp/ec_crs_$$ 2>/dev/null
+    cp /tmp/ec_crs_$$ /etc/crontabs/root
+    rm -f /tmp/ec_crs_$$
 
     # Reload cron
-    killall crond 2>/dev/null; crond 2>/dev/null
+    kill -HUP $(head -1 /var/run/crond.pid 2>/dev/null) 2>/dev/null
 
     logger -t eventcenter "service stopped"
 }
 
-reload_service() {
+restart() {
     stop_service
     start_service
 }
