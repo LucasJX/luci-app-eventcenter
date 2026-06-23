@@ -272,6 +272,87 @@ return view.extend({
 		};
 
 		// ============================================================
+
+		// ============================================================
+		//  ntfy Notifier (自建推送服务)
+		// ============================================================
+		s = m.section(form.NamedSection, 'ntfy', 'notifier', 'ntfy 推送');
+		s.addremove = false;
+		s.anonymous = false;
+
+		o = s.option(form.Flag, 'enable', '启用',
+			'启用 ntfy 推送通知 (自建或公共服务器)');
+		o.default = '0';
+		o.rmempty = false;
+
+		o = s.option(form.Value, 'url', '服务器地址',
+			'ntfy 服务端地址 (如 http://192.168.100.100:2586 或 https://ntfy.sh)');
+		o.default = 'https://ntfy.sh';
+		o.rmempty = false;
+		o.placeholder = 'https://ntfy.sh';
+
+		o = s.option(form.Value, 'topic', 'Topic',
+			'推送主题名称，客户端需订阅此主题');
+		o.rmempty = true;
+		o.placeholder = 'my-router-events';
+
+		o = s.option(form.Value, 'token', 'Access Token',
+			'ntfy 访问令牌 (优先级高于用户名密码认证)');
+		o.password = true;
+		o.rmempty = true;
+
+		o = s.option(form.Value, 'user', '用户名',
+			'HTTP Basic Auth 用户名 (与 Token 二选一)');
+		o.rmempty = true;
+		o.depends('token', '');
+
+		o = s.option(form.Value, 'pass', '密码',
+			'HTTP Basic Auth 密码');
+		o.password = true;
+		o.rmempty = true;
+		o.depends('token', '');
+
+		o = s.option(form.ListValue, 'priority', '优先级',
+			'消息优先级，影响通知展示方式');
+		o.value('min', '最低');
+		o.value('low', '低');
+		o.value('default', '默认');
+		o.value('high', '高');
+		o.value('urgent', '紧急');
+		o.default = 'default';
+		o.rmempty = false;
+
+		o = s.option(form.Value, 'tags', '标签',
+			'消息标签 (emoji 或文字，逗号分隔)');
+		o.rmempty = true;
+		o.placeholder = 'warning,router';
+
+		o = s.option(form.Value, 'icon', '图标 URL',
+			'自定义通知图标地址');
+		o.rmempty = true;
+
+		o = s.option(form.Value, 'click', '点击跳转',
+			'点击通知后打开的 URL');
+		o.rmempty = true;
+		o.placeholder = 'http://192.168.1.1/cgi-bin/luci';
+
+		o = s.option(form.Button, '_test_ntfy', '测试 ntfy',
+			'发送测试通知');
+		o.inputtitle = '发送测试';
+		o.inputstyle = 'action';
+		o.onclick = function() {
+			var btn = this;
+			btn.textContent = '发送中...';
+			btn.disabled = true;
+			fs.exec('notifier_ntfy.sh', ['ntfy 测试消息 - Event Center']).then(function() {
+				btn.textContent = '测试已发送!';
+				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
+			}).catch(function() {
+				btn.textContent = '失败';
+				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
+			});
+		};
+
 		//  OpenClash Monitor (with cron interval)
 		// ============================================================
 		s = m.section(form.NamedSection, 'openclash', 'monitor', 'OpenClash 订阅监控');

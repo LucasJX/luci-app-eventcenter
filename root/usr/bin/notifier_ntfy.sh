@@ -1,8 +1,7 @@
 #!/bin/sh
-# Event Center - ntfy Notifier (自建推送服务)
+# Event Center - ntfy Notifier
 # /usr/bin/notifier_ntfy.sh "<message>"
-# Sends notification via ntfy (self-hosted)
-# API: POST http://server/topic
+# Sends notification via ntfy (self-hosted or ntfy.sh)
 
 . /usr/share/eventcenter/utils.sh
 
@@ -11,6 +10,10 @@ _topic=$(uci -q get eventcenter.ntfy.topic 2>/dev/null)
 _token=$(uci -q get eventcenter.ntfy.token 2>/dev/null)
 _user=$(uci -q get eventcenter.ntfy.user 2>/dev/null)
 _pass=$(uci -q get eventcenter.ntfy.pass 2>/dev/null)
+_priority=$(uci -q get eventcenter.ntfy.priority 2>/dev/null)
+_tags=$(uci -q get eventcenter.ntfy.tags 2>/dev/null)
+_icon=$(uci -q get eventcenter.ntfy.icon 2>/dev/null)
+_click=$(uci -q get eventcenter.ntfy.click 2>/dev/null)
 
 if [ -z "$_url" ] || [ -z "$_topic" ]; then
     echo "Error: ntfy url or topic not configured" >&2
@@ -23,31 +26,52 @@ if [ -z "$_message" ]; then
     exit 1
 fi
 
-# Extract title
+# Extract title (first line, strip emoji/markdown)
 _title=$(printf '%s' "$_message" | head -1 | sed 's/^[*📊🚀⚠️💚🟡📦📅🔧♻️🚤 ]*//;s/[*]*//g')
 [ -z "$_title" ] && _title="Event Center"
 
 # Remove trailing slash from URL
 _url=$(echo "$_url" | sed 's:/$::')
 
-# Build curl command
-_curl_cmd="curl -s -o /tmp/ntfy_response.json -w '%{http_code}' --connect-timeout 10 --max-time 10 -X POST"
-_curl_cmd="$_curl_cmd -H 'Title: $_title'"
-_curl_cmd="$_curl_cmd -H 'Priority: default'"
+# Default values
+[ -z "$_priority" ] && _priority="default"
 
-# Auth
+# Build curl args
+set -- curl -s -o /dev/null -w "%{http_code}" \
+    --connect-timeout 10 \
+    --max-time 10 \
+    -X POST \
+    -H "Title: $_title" \
+    -H "Priority: $_priority"
+
+# Auth - token takes priority over user/pass
 if [ -n "$_token" ]; then
-    _curl_cmd="$_curl_cmd -H 'Authorization: Bearer $_token'"
+    _hdr=$(printf "%s %s" "Authorization:Bearer" "$_token")
+    set -- "$@" -H "$_hdr"
 elif [ -n "$_user" ] && [ -n "$_pass" ]; then
-    _curl_cmd="$_curl_cmd -u '$_user:$_pass'"
+    set -- "$@" -u "$_user:$_pass"
 fi
 
-_curl_cmd="$_curl_cmd -d '$(printf '%s' "$_message")'"
-_curl_cmd="$_curl_cmd '${_url}/${_topic}'"
+# Optional tags
+if [ -n "$_tags" ]; then
+    set -- "$@" -H "Tags: $_tags"
+fi
 
-_response=$(eval "$_curl_cmd" 2>/dev/null)
+# Optional icon
+if [ -n "$_icon" ]; then
+    set -- "$@" -H "Icon: $_icon"
+fi
+
+# Optional click URL
+if [ -n "$_click" ]; then
+    set -- "$@" -H "Click: $_click"
+fi
+
+# Message body and URL
+set -- "$@" -d "$_message" "${_url}/${_topic}"
+
+_response=$("$@" 2>/dev/null)
 _curl_exit=$?
-rm -f /tmp/ntfy_response.json 2>/dev/null
 
 if [ "$_curl_exit" -ne 0 ]; then
     echo "Error: curl failed with exit code $_curl_exit" >&2
