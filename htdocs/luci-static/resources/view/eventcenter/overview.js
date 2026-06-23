@@ -46,7 +46,7 @@ return view.extend({
 			{ name: 'Telegram', key: 'telegram', icon: '✈️' },
 			{ name: '企业微信', key: 'wechat', icon: '💬' },
 			{ name: 'Bark', key: 'bark', icon: '🔔' },
-			{ name: 'PushPlus', key: 'pushplus', icon: '📱' }
+			{ name: 'Server酱', key: 'serverchan', icon: '📨' }
 		];
 
 		var notifierRows = [];
@@ -59,7 +59,7 @@ return view.extend({
 				if (n.key === 'telegram') configured = !!uci.get('eventcenter', n.key, 'token');
 				else if (n.key === 'wechat') configured = !!uci.get('eventcenter', n.key, 'webhook');
 				else if (n.key === 'bark') configured = !!uci.get('eventcenter', n.key, 'device_key');
-				else if (n.key === 'pushplus') configured = !!uci.get('eventcenter', n.key, 'token');
+				else if (n.key === 'serverchan') configured = !!uci.get('eventcenter', n.key, 'sendkey');
 			} catch(e) {}
 
 			var statusText, statusColor;

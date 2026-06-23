@@ -29,11 +29,9 @@ if [ ! -f /etc/config/eventcenter ]; then
         set eventcenter.bark.sound='minuet'
         set eventcenter.bark.group='EventCenter'
 
-        set eventcenter.pushplus=notifier
-        set eventcenter.pushplus.enable='0'
-        set eventcenter.pushplus.token=''
-        set eventcenter.pushplus.topic=''
-        set eventcenter.pushplus.template='markdown'
+        set eventcenter.serverchan=notifier
+        set eventcenter.serverchan.enable='0'
+        set eventcenter.serverchan.sendkey=''
 
         set eventcenter.openclash=monitor
         set eventcenter.openclash.enable='1'
@@ -79,11 +77,9 @@ ensure_section notifier bark \
     sound 'minuet' \
     group 'EventCenter'
 
-ensure_section notifier pushplus \
+ensure_section notifier serverchan \
     enable '0' \
-    token '' \
-    topic '' \
-    template 'markdown'
+    sendkey ''
 
 # Ensure interval exists on monitor section
 if ! uci -q get eventcenter.@monitor[0].interval >/dev/null 2>&1; then

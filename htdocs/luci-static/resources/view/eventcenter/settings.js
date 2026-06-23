@@ -199,35 +199,23 @@ return view.extend({
 		};
 
 		// ============================================================
-		//  PushPlus Notifier (微信推送)
+		//  Server酱 Turbo Notifier
 		// ============================================================
-		s = m.section(form.NamedSection, 'pushplus', 'notifier', 'PushPlus 推送 (微信)');
+		s = m.section(form.NamedSection, 'serverchan', 'notifier', 'Server酱 Turbo');
 		s.addremove = false;
 		s.anonymous = false;
 
 		o = s.option(form.Flag, 'enable', '启用',
-			'启用 PushPlus 微信推送');
+			'启用 Server酱 推送 (sct.ftqq.com)');
 		o.default = '0';
 		o.rmempty = false;
 
-		o = s.option(form.Value, 'token', 'Token',
-			'PushPlus 推送 Token (在 pushplus.plus 获取)');
+		o = s.option(form.Value, 'sendkey', 'SendKey',
+			'Server酱 Turbo 的 SendKey (在 sct.ftqq.com 获取)');
 		o.password = true;
 		o.rmempty = true;
 
-		o = s.option(form.Value, 'topic', '群组编码',
-			'一对多推送的群组编码，留空为一对一推送');
-		o.rmempty = true;
-
-		o = s.option(form.ListValue, 'template', '消息模板',
-			'消息内容格式');
-		o.value('markdown', 'Markdown');
-		o.value('html', 'HTML');
-		o.value('txt', '纯文本');
-		o.default = 'markdown';
-		o.rmempty = false;
-
-		o = s.option(form.Button, '_test_pushplus', '测试 PushPlus',
+		o = s.option(form.Button, '_test_serverchan', '测试 Server酱',
 			'发送测试通知');
 		o.inputtitle = '发送测试';
 		o.inputstyle = 'action';
@@ -235,7 +223,7 @@ return view.extend({
 			var btn = this;
 			btn.textContent = '发送中...';
 			btn.disabled = true;
-			fs.exec('notifier_pushplus.sh', ['PushPlus 测试消息 - Event Center']).then(function() {
+			fs.exec('notifier_serverchan.sh', ['Server酱测试消息 - Event Center']).then(function() {
 				btn.textContent = '测试已发送!';
 				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
 			}).catch(function() {
