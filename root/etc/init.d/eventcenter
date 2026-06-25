@@ -95,6 +95,15 @@ start_service() {
         logger -t eventcenter "device-monitor enabled (interval=${device_interval}min)"
     fi
 
+    # --- Aggregate flush (every 5 minutes) ---
+    local agg_enable
+    agg_enable=$(uci -q get eventcenter.@global[0].aggregate_enable 2>/dev/null)
+    if [ "$agg_enable" = "1" ]; then
+        sed -i '/eventcenter_aggregate_flush/d' /etc/crontabs/root 2>/dev/null
+        echo "*/5 * * * * /usr/bin/eventcenter aggregate-flush" >> /etc/crontabs/root
+        logger -t eventcenter "aggregate flush enabled (every 5min)"
+    fi
+
     # --- Watcher setup ---
     local realtime
     realtime=$(uci -q get eventcenter.@monitor[0].realtime 2>/dev/null)
@@ -128,6 +137,7 @@ stop_service() {
     sed -i '/eventcenter_check_node_health/d' /etc/crontabs/root
     sed -i '/eventcenter_check_system_health/d' /etc/crontabs/root
     sed -i '/eventcenter_check_device_monitor/d' /etc/crontabs/root
+    sed -i '/eventcenter_aggregate_flush/d' /etc/crontabs/root
     logger -t eventcenter "service stopped"
 }
 

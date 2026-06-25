@@ -5,6 +5,8 @@ config eventcenter 'global'
     option dedup_ttl '300'
     option dedup_path '/tmp/eventcenter_dedup'
     option dedup_max '500'
+    option aggregate_enable '1'
+    option aggregate_ttl '600'
 
 config notifier 'telegram'
     option enable '1'

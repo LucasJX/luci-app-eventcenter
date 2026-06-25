@@ -81,6 +81,12 @@ case "$1" in
         dedup_clear
         echo "Dedup cache cleared."
         ;;
+    aggregate-flush)
+        aggregate_flush
+        ;;
+    aggregate-status)
+        aggregate_status
+        ;;
     help|--help|-h)
         usage
         ;;

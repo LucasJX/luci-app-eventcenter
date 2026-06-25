@@ -56,6 +56,22 @@ return view.extend({
 		o.datatype = 'uinteger';
 		o.rmempty = false;
 
+		o = s.option(form.Flag, 'aggregate_enable', '启用告警聚合',
+			'相同事件在时间窗口内聚合为一条通知，避免消息轰炸');
+		o.default = '1';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'aggregate_ttl', '聚合时间窗口',
+			'在此时间窗口内的相同事件会聚合为一条通知');
+		o.value('300', '5 分钟');
+		o.value('600', '10 分钟 (推荐)');
+		o.value('900', '15 分钟');
+		o.value('1800', '30 分钟');
+		o.value('3600', '1 小时');
+		o.default = '600';
+		o.rmempty = false;
+		o.depends('aggregate_enable', '1');
+
 		// --- Telegram Notifier ---
 		s = m.section(form.NamedSection, 'telegram', 'notifier', 'Telegram 通知');
 		s.addremove = false;
