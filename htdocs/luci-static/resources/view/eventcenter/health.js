@@ -38,17 +38,27 @@ return view.extend({
 			return { group: parts[0] || '', node: parts[1] || '' };
 		});
 
-		// Parse latency history: time\tgroup\tnode\tdelay
+		// Parse latency history: time	group	node	delay
 		var latencyLines = latencyOutput.split('\n').filter(function(l) { return l.length > 0; });
 		var latencyEntries = [];
-		for (var i = latencyLines.length - 1; i >= 0 && latencyEntries.length < 20; i--) {
-			var parts = latencyLines[i].split('\t');
+		var latencyByGroup = {};
+		for (var i = latencyLines.length - 1; i >= 0 && latencyEntries.length < 50; i--) {
+			var parts = latencyLines[i].split('	');
 			if (parts.length >= 4) {
 				latencyEntries.push({
 					time: parts[0],
 					group: parts[1],
 					node: parts[2],
 					delay: parts[3]
+				});
+
+				// Group by proxy group for chart
+				if (!latencyByGroup[parts[1]]) {
+					latencyByGroup[parts[1]] = [];
+				}
+				latencyByGroup[parts[1]].push({
+					time: parts[0],
+					delay: parseInt(parts[3], 10)
 				});
 			}
 		}
@@ -154,6 +164,66 @@ return view.extend({
 			])
 		]);
 
+		// Latency trend chart (simple CSS-based visualization)
+		var trendCharts = [];
+		var groupNames = Object.keys(latencyByGroup);
+		if (groupNames.length > 0) {
+			groupNames.forEach(function(group) {
+				var data = latencyByGroup[group].reverse(); // chronological order
+				if (data.length < 2) return;
+
+				// Calculate stats
+				var delays = data.map(function(d) { return d.delay; });
+				var minDelay = Math.min.apply(null, delays);
+				var maxDelay = Math.max.apply(null, delays);
+				var avgDelay = Math.round(delays.reduce(function(a, b) { return a + b; }, 0) / delays.length);
+
+				// Normalize delays to 0-100% for visualization
+				var range = maxDelay - minDelay || 1;
+				var bars = data.map(function(d) {
+					var height = Math.round(((d.delay - minDelay) / range) * 80) + 20; // 20-100%
+					var color = d.delay < 500 ? '#28a745' : d.delay < 1000 ? '#ffc107' : '#dc3545';
+					var time = d.time.split(' ')[1] || d.time; // Show HH:MM:SS
+					return E('div', {
+						'style': 'display:flex;flex-direction:column;align-items:center;flex:1;min-width:20px'
+					}, [
+						E('div', {
+							'style': 'font-size:0.7em;color:#888;margin-bottom:2px'
+						}, d.delay + 'ms'),
+						E('div', {
+							'style': 'width:80%;height:' + height + 'px;background:' + color + ';border-radius:3px 3px 0 0;transition:height 0.3s'
+						}),
+						E('div', {
+							'style': 'font-size:0.6em;color:#aaa;margin-top:2px;transform:rotate(-45deg);white-space:nowrap'
+						}, time.substring(0, 5))
+					]);
+				});
+
+				var chart = E('div', { 'class': 'panel cbi-section' }, [
+					E('h3', {}, '延迟趋势: ' + group),
+					E('div', { 'style': 'display:flex;gap:8px;margin-bottom:10px;padding:0 10px' }, [
+						E('span', { 'style': 'color:#28a745' }, '● <500ms'),
+						E('span', { 'style': 'color:#ffc107' }, '● 500-1000ms'),
+						E('span', { 'style': 'color:#dc3545' }, '● >1000ms')
+					]),
+					E('div', { 'style': 'display:flex;gap:4px;align-items:flex-end;height:120px;padding:10px;overflow-x:auto' }, bars),
+					E('div', { 'style': 'display:flex;justify-content:space-around;padding:10px;background:#f8f9fa;border-radius:0 0 4px 4px' }, [
+						E('span', {}, '最低: ' + minDelay + 'ms'),
+						E('span', {}, '平均: ' + avgDelay + 'ms'),
+						E('span', {}, '最高: ' + maxDelay + 'ms')
+					])
+				]);
+				trendCharts.push(chart);
+			});
+		}
+
+		var trendSection = E('div', {}, trendCharts.length > 0 ? trendCharts : [
+			E('div', { 'class': 'panel cbi-section' }, [
+				E('h3', {}, '延迟趋势'),
+				E('div', { 'style': 'text-align:center;padding:30px;color:#888' }, '暂无足够数据生成趋势图（需要至少2个数据点）')
+			])
+		]);
+
 		// Recent health events
 		var eventRows = [];
 		if (healthEvents.length === 0) {
@@ -191,6 +261,7 @@ return view.extend({
 			statusCard,
 			stateTable,
 			latencyTable,
+			trendSection,
 			eventTable
 		]);
 	},
