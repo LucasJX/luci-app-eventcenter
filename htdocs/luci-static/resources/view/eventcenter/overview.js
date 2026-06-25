@@ -6,6 +6,13 @@
 'require dom';
 'require uci';
 
+var cardBase = 'background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:20px;margin-bottom:16px';
+var tableStyle = 'width:100%;border-collapse:collapse';
+
+function statusDot(color) {
+	return E('span', { 'style': 'display:inline-block;width:10px;height:10px;border-radius:50%;background:' + color });
+}
+
 return view.extend({
 	load: function() {
 		return Promise.all([
@@ -24,193 +31,150 @@ return view.extend({
 		var stateOutput = (data[3] && data[3].stdout) ? data[3].stdout : '';
 		var subsOutput = (data[4] && data[4].stdout) ? data[4].stdout : '';
 
-		// Parse status output
+		/* Parse status */
 		var statusLines = statusOutput.split('\n').filter(function(l) { return l.trim().length > 0; });
-		var lastEvent = '';
-		var logCount = 0;
-		var dedupCount = 0;
+		var lastEvent = '', logCount = 0, dedupCount = 0;
 		statusLines.forEach(function(line) {
-			if (line.indexOf('Last event:') > -1) lastEvent = line.split(':')[1] ? line.split(':').slice(1).join(':').trim() : '';
-			if (line.indexOf('Log:') > -1) {
-				var m = line.match(/\((\d+) entries\)/);
-				if (m) logCount = parseInt(m[1], 10);
-			}
-			if (line.indexOf('Dedup cache:') > -1) {
-				var m2 = line.match(/\((\d+) entries/);
-				if (m2) dedupCount = parseInt(m2[1], 10);
-			}
+			if (line.indexOf('Last event:') > -1) lastEvent = line.split(':').slice(1).join(':').trim();
+			var m;
+			if (line.indexOf('Log:') > -1) { m = line.match(/\((\d+) entries\)/); if (m) logCount = parseInt(m[1], 10); }
+			if (line.indexOf('Dedup cache:') > -1) { m = line.match(/\((\d+) entries/); if (m) dedupCount = parseInt(m[1], 10); }
 		});
 
-		// Parse notifier configs
+		/* Parse notifiers */
 		var notifiers = [
-			{ name: 'Telegram', key: 'telegram', icon: '✈️', checkField: 'token' },
-			{ name: '企业微信', key: 'wechat', icon: '💬', checkField: 'webhook' },
-			{ name: 'Bark', key: 'bark', icon: '🔔', checkField: 'device_key' },
-			{ name: 'Server酱', key: 'serverchan', icon: '📨', checkField: 'sendkey' },
-			{ name: 'Server酱³', key: 'serverchan3', icon: '📱', checkField: 'sendkey' },
-			{ name: 'ntfy', key: 'ntfy', icon: '📢', checkField: 'topic' },
-			{ name: 'PushPlus', key: 'pushplus', icon: '📣', checkField: 'token' }
+			{ name: 'Telegram', key: 'telegram', icon: '✈️', checkField: 'token', color: '#0088cc' },
+			{ name: 'ntfy', key: 'ntfy', icon: '📢', checkField: 'topic', color: '#2563eb' },
+			{ name: '企业微信', key: 'wechat', icon: '💬', checkField: 'webhook', color: '#07c160' },
+			{ name: 'Bark', key: 'bark', icon: '🔔', checkField: 'device_key', color: '#f59e0b' },
+			{ name: 'Server酱', key: 'serverchan', icon: '📨', checkField: 'sendkey', color: '#ef4444' },
+			{ name: 'Server酱³', key: 'serverchan3', icon: '📱', checkField: 'sendkey', color: '#8b5cf6' },
+			{ name: 'PushPlus', key: 'pushplus', icon: '📣', checkField: 'token', color: '#06b6d4' }
 		];
 
-		var notifierRows = [];
-		notifiers.forEach(function(n) {
-			var enabled = false;
-			var configured = false;
+		var enabledNotifiers = 0;
+		var notifierCards = notifiers.map(function(n) {
+			var enabled = false, configured = false;
 			try {
 				enabled = uci.get('eventcenter', n.key, 'enable') === '1';
 				configured = !!uci.get('eventcenter', n.key, n.checkField);
 			} catch(e) {}
+			if (enabled && configured) enabledNotifiers++;
 
-			var statusText, statusColor;
-			if (enabled && configured) {
-				statusText = '✅ 运行中';
-				statusColor = '#28a745';
-			} else if (configured) {
-				statusText = '⏸ 已配置';
-				statusColor = '#ffc107';
-			} else {
-				statusText = '⭕ 未配置';
-				statusColor = '#6c757d';
-			}
+			var statusText, dotColor;
+			if (enabled && configured) { statusText = '运行中'; dotColor = '#22c55e'; }
+			else if (configured) { statusText = '已配置'; dotColor = '#f59e0b'; }
+			else { statusText = '未配置'; dotColor = '#d1d5db'; }
 
-			notifierRows.push(E('tr', {}, [
-				E('td', {}, n.icon + ' ' + n.name),
-				E('td', { 'style': 'color:' + statusColor + ';font-weight:bold' }, statusText)
-			]));
+			return E('div', { 'style': cardBase + ';padding:14px 18px;border-left:4px solid ' + n.color + ';display:flex;align-items:center;gap:12px;min-width:200px;flex:1 1 200px' }, [
+				E('span', { 'style': 'font-size:1.3em' }, n.icon),
+				E('div', { 'style': 'flex:1' }, [
+					E('div', { 'style': 'font-weight:700;font-size:0.95em' }, n.name),
+					E('div', { 'style': 'font-size:0.75em;color:#888' }, configured ? '已配置' : '未配置')
+				]),
+				E('div', { 'style': 'display:flex;align-items:center;gap:6px' }, [
+					statusDot(dotColor),
+					E('span', { 'style': 'font-size:0.8em;color:' + dotColor + ';font-weight:600' }, statusText)
+				])
+			]);
 		});
 
-		var notifierTable = E('div', { 'class': 'panel cbi-section', 'style': 'margin-bottom:15px' }, [
-			E('h3', {}, '通知渠道'),
-			E('table', { 'class': 'table' }, [
-				E('thead', {}, E('tr', {}, [
-					E('th', { 'style': 'width:150px' }, '渠道'),
-					E('th', {}, '状态')
-				])),
-				E('tbody', {}, notifierRows)
-			])
-		]);
-
-		// Parse subscription state
-		var subStateDir = '/tmp/eventcenter_openclash/';
+		/* Parse subscriptions */
 		var subsFiles = subsOutput.trim().split('\n').filter(function(f) { return f.length > 0; });
-		var subRows = [];
-		subsFiles.forEach(function(f) {
-			var subName = f.replace('.state', '');
-			subRows.push(E('tr', {}, [
-				E('td', { 'style': 'font-weight:bold' }, subName),
-				E('td', {}, '✅ 已建立基线')
-			]));
-		});
-		if (subRows.length === 0) {
-			subRows.push(E('tr', {}, E('td', { 'colspan': '2', 'style': 'text-align:center;padding:15px;color:#888' }, '暂无订阅数据（等待首次同步）')));
-		}
-
-		// Parse node state for group count
 		var nodeLines = stateOutput.trim().split('\n').filter(function(l) { return l.length > 0; });
 
-		var subTable = E('div', { 'class': 'panel cbi-section', 'style': 'margin-bottom:15px' }, [
-			E('h3', {}, '订阅监控'),
-			E('table', { 'class': 'table' }, [
-				E('thead', {}, E('tr', {}, [
-					E('th', { 'style': 'width:200px' }, '订阅名称'),
-					E('th', {}, '状态')
-				])),
-				E('tbody', {}, subRows)
-			]),
-			E('div', { 'style': 'padding:8px 15px;font-size:0.9em;color:#666' }, [
-				E('span', {}, '节点健康监测: '),
-				E('strong', {}, nodeLines.length > 0 ? nodeLines.length + ' 个代理组' : '未启用')
-			])
-		]);
+		var subCards = subsFiles.map(function(f) {
+			return E('div', { 'style': cardBase + ';padding:12px 18px;display:flex;align-items:center;gap:12px' }, [
+				E('span', { 'style': 'font-size:1.1em' }, '📦'),
+				E('div', { 'style': 'flex:1;font-weight:600' }, f.replace('.state', '')),
+				E('div', { 'style': 'display:flex;align-items:center;gap:6px' }, [
+					statusDot('#22c55e'),
+					E('span', { 'style': 'font-size:0.8em;color:#22c55e;font-weight:600' }, '已建立基线')
+				])
+			]);
+		});
+		if (subCards.length === 0) {
+			subCards.push(E('div', { 'style': 'text-align:center;padding:20px;color:#888;font-size:0.9em' }, '暂无订阅数据（等待首次同步）'));
+		}
 
-		// Parse recent events (last 10)
+		/* Parse events */
 		var logLines = logOutput.split('\n').filter(function(l) { return l.length > 0 && l.indexOf('|') > -1; });
 		var recentEntries = [];
 		for (var i = logLines.length - 1; i >= 0 && recentEntries.length < 10; i--) {
 			var parts = logLines[i].split('|');
-			if (parts.length >= 5) {
-				recentEntries.push({
-					time: parts[0],
-					source: parts[1],
-					event: parts[2],
-					level: parts[3],
-					title: parts[4]
-				});
-			}
+			if (parts.length >= 5) recentEntries.push({ time: parts[0], source: parts[1], event: parts[2], level: parts[3], title: parts[4] });
 		}
 
 		var eventRows = [];
 		if (recentEntries.length === 0) {
 			eventRows.push(E('tr', {}, E('td', { 'colspan': '4', 'style': 'text-align:center;padding:20px;color:#888' }, '暂无事件记录')));
 		} else {
+			var levelColor = { info: '#17a2b8', warn: '#ffc107', error: '#dc3545', critical: '#6f1207' };
 			recentEntries.forEach(function(entry) {
-				var levelColor = { info: '#17a2b8', warn: '#ffc107', error: '#dc3545', critical: '#6f1207' };
-				eventRows.push(E('tr', {}, [
-					E('td', { 'style': 'white-space:nowrap;font-size:0.9em' }, entry.time),
-					E('td', {}, E('span', {
-						'style': 'padding:2px 8px;border-radius:3px;font-size:0.85em;font-weight:bold;color:' + (levelColor[entry.level] || '#333')
-					}, entry.level)),
-					E('td', {}, entry.title),
-					E('td', { 'style': 'font-size:0.9em;color:#666' }, entry.source)
+				eventRows.push(E('tr', { 'style': 'border-bottom:1px solid #f3f4f6' }, [
+					E('td', { 'style': 'white-space:nowrap;font-size:0.85em;padding:10px 12px' }, entry.time),
+					E('td', { 'style': 'padding:10px 12px' }, E('span', { 'style': 'padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:bold;background:' + (levelColor[entry.level] || '#333') + '18;color:' + (levelColor[entry.level] || '#333') }, entry.level)),
+					E('td', { 'style': 'padding:10px 12px' }, entry.title),
+					E('td', { 'style': 'font-size:0.85em;color:#666;padding:10px 12px' }, entry.source)
 				]));
 			});
 		}
 
-		var eventTable = E('div', { 'class': 'panel cbi-section', 'style': 'margin-bottom:15px' }, [
-			E('h3', {}, '最近事件'),
-			E('table', { 'class': 'table' }, [
-				E('thead', {}, E('tr', {}, [
-					E('th', { 'style': 'width:160px' }, '时间'),
-					E('th', { 'style': 'width:80px' }, '级别'),
-					E('th', { 'style': 'width:200px' }, '标题'),
-					E('th', {}, '来源')
-				])),
-				E('tbody', {}, eventRows)
-			])
-		]);
+		/* ── 布局 ── */
+		return E('div', { 'style': 'padding:0' }, [
+			E('h2', { 'style': 'margin-bottom:4px' }, '事件中心'),
+			E('div', { 'style': 'color:#666;font-size:0.9em;margin-bottom:20px' }, '系统状态总览'),
 
-		// Status summary card
-		var enabledNotifiers = notifiers.filter(function(n) {
-			try {
-				return uci.get('eventcenter', n.key, 'enable') === '1' &&
-					   !!uci.get('eventcenter', n.key, n.checkField);
-			} catch(e) { return false; }
-		}).length;
+			/* 统计卡 */
+			E('div', { 'style': 'display:flex;flex-wrap:wrap;gap:16px;margin-bottom:20px' }, [
+				statCard(globalEnabled ? '运行中' : '已停止', '服务状态', globalEnabled ? '#d4edda' : '#f8d7da', globalEnabled ? '#155724' : '#721c24'),
+				statCard('' + enabledNotifiers, '活跃渠道', '#e7f3ff', '#004085'),
+				statCard('' + logCount, '总事件数', '#fff3cd', '#856404'),
+				statCard('' + subsFiles.length, '监控订阅', '#e8f5e9', '#2e7d32')
+			]),
 
-		var summaryCard = E('div', { 'class': 'panel cbi-section', 'style': 'margin-bottom:15px;padding:20px' }, [
-			E('div', { 'style': 'display:flex;flex-wrap:wrap;gap:20px' }, [
-				E('div', { 'style': 'flex:1;min-width:120px;text-align:center;padding:15px;background:' + (globalEnabled ? '#d4edda' : '#f8d7da') + ';border-radius:8px' }, [
-					E('div', { 'style': 'font-size:1.8em;font-weight:bold;color:' + (globalEnabled ? '#155724' : '#721c24') }, globalEnabled ? '运行中' : '已停止'),
-					E('div', { 'style': 'font-size:0.85em;color:#666;margin-top:5px' }, '服务状态')
+			/* 最近事件 */
+			E('div', { 'style': cardBase }, [
+				E('div', { 'style': 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px' }, [
+					E('h3', { 'style': 'margin:0;font-size:1em' }, '📋 最近事件'),
+					lastEvent ? E('span', { 'style': 'font-size:0.8em;color:#888' }, lastEvent) : ''
 				]),
-				E('div', { 'style': 'flex:1;min-width:120px;text-align:center;padding:15px;background:#e7f3ff;border-radius:8px' }, [
-					E('div', { 'style': 'font-size:1.8em;font-weight:bold;color:#004085' }, '' + enabledNotifiers),
-					E('div', { 'style': 'font-size:0.85em;color:#666;margin-top:5px' }, '活跃通知渠道')
-				]),
-				E('div', { 'style': 'flex:1;min-width:120px;text-align:center;padding:15px;background:#fff3cd;border-radius:8px' }, [
-					E('div', { 'style': 'font-size:1.8em;font-weight:bold;color:#856404' }, '' + logCount),
-					E('div', { 'style': 'font-size:0.85em;color:#666;margin-top:5px' }, '总事件数')
-				]),
-				E('div', { 'style': 'flex:1;min-width:120px;text-align:center;padding:15px;background:#e8f5e9;border-radius:8px' }, [
-					E('div', { 'style': 'font-size:1.8em;font-weight:bold;color:#2e7d32' }, '' + subsFiles.length),
-					E('div', { 'style': 'font-size:0.85em;color:#666;margin-top:5px' }, '监控订阅数')
+				E('table', { 'style': tableStyle }, [
+					E('thead', {}, E('tr', { 'style': 'border-bottom:2px solid #eee' }, [
+						E('th', { 'style': 'text-align:left;padding:8px 12px;font-size:0.8em;color:#666;width:160px' }, '时间'),
+						E('th', { 'style': 'text-align:left;padding:8px 12px;font-size:0.8em;color:#666;width:70px' }, '级别'),
+						E('th', { 'style': 'text-align:left;padding:8px 12px;font-size:0.8em;color:#666' }, '标题'),
+						E('th', { 'style': 'text-align:left;padding:8px 12px;font-size:0.8em;color:#666' }, '来源')
+					])),
+					E('tbody', {}, eventRows)
 				])
 			]),
-			lastEvent ? E('div', { 'style': 'margin-top:10px;font-size:0.9em;color:#666' }, '最近事件: ' + lastEvent) : ''
-		]);
 
-		var container = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, '事件中心 - 概览'),
-			summaryCard,
-			notifierTable,
-			subTable,
-			eventTable
-		]);
+			/* 通知渠道 */
+			E('div', { 'style': cardBase }, [
+				E('h3', { 'style': 'margin:0 0 14px;font-size:1em' }, '📡 通知渠道'),
+				E('div', { 'style': 'display:flex;flex-wrap:wrap;gap:12px' }, notifierCards)
+			]),
 
-		return container;
+			/* 订阅监控 */
+			E('div', { 'style': cardBase }, [
+				E('div', { 'style': 'display:flex;justify-content:space-between;align-items:center;margin-bottom:14px' }, [
+					E('h3', { 'style': 'margin:0;font-size:1em' }, '📦 订阅监控'),
+					E('span', { 'style': 'font-size:0.8em;color:#888' }, nodeLines.length > 0 ? nodeLines.length + ' 个代理组' : '未启用')
+				]),
+				E('div', { 'style': 'display:flex;flex-wrap:wrap;gap:12px' }, subCards)
+			])
+		]);
 	},
 
 	handleSaveApply: null,
 	handleSave: null,
 	handleReset: null
 });
+
+function statCard(value, label, bg, color) {
+	return E('div', { 'style': 'flex:1;min-width:120px;text-align:center;padding:16px;background:' + bg + ';border-radius:10px' }, [
+		E('div', { 'style': 'font-size:1.8em;font-weight:bold;color:' + color }, value),
+		E('div', { 'style': 'font-size:0.8em;color:#666;margin-top:4px' }, label)
+	]);
+}

@@ -4,6 +4,63 @@
 'require fs';
 'require uci';
 
+/* ── 卡片样式注入 ── */
+var CARD_CSS = [
+	'.cbi-map { padding:0 !important }',
+	'.cbi-map > h2 { margin-bottom:4px }',
+	'.cbi-map > .cbi-map-descr { color:#666;font-size:0.9em;margin-bottom:20px }',
+	'.cbi-section { background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:20px;margin-bottom:16px;border-top:3px solid #6b7280 }',
+	'.cbi-section > h3 { border-bottom:1px solid #eee;padding-bottom:12px;margin:-20px -20px 16px -20px;padding:16px 20px 12px;font-size:1.05em;font-weight:700 }',
+	'.cbi-value { margin-bottom:10px }',
+	'.cbi-value > .cbi-value-title { font-weight:600;font-size:0.85em;color:#555;margin-bottom:4px }',
+	'.cbi-value input[type=text], .cbi-value input[type=password], .cbi-value textarea, .cbi-value select { border:1px solid #ddd;border-radius:6px;padding:8px 10px }',
+	'.cbi-value input:focus, .cbi-value select:focus { border-color:#3b82f6;outline:none;box-shadow:0 0 0 2px rgba(59,130,246,0.15) }',
+	'.cbi-value .cbi-input-description { font-size:0.75em;color:#888;margin-top:4px }',
+	'.cbi-section .cbi-section-table-row { background:#fff;border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:8px }',
+	'.cbi-button-action { background:#f0f0f0;color:#333;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600 }',
+	'.cbi-button-action:hover { background:#e5e7eb }',
+	'.cbi-button-save, .cbi-button-apply { border-radius:8px !important;padding:10px 24px !important;font-weight:600 !important }'
+].join('\n');
+
+/* 卡片颜色映射 */
+var sectionColors = {
+	'全局设置': '#6b7280',
+	'Telegram': '#0088cc',
+	'企业微信': '#07c160',
+	'Bark': '#f59e0b',
+	'Server酱 Turbo': '#ef4444',
+	'Server酱³': '#8b5cf6',
+	'ntfy': '#2563eb',
+	'PushPlus': '#06b6d4',
+	'OpenClash': '#ea580c',
+	'节点故障转移': '#dc2626'
+};
+
+function applyCardStyles(mapEl) {
+	/* 注入 CSS */
+	if (!document.getElementById('ec-card-css')) {
+		var style = document.createElement('style');
+		style.id = 'ec-card-css';
+		style.textContent = CARD_CSS;
+		document.head.appendChild(style);
+	}
+
+	/* 给每个 section 加颜色 */
+	var sections = mapEl.querySelectorAll('.cbi-section');
+	sections.forEach(function(sec) {
+		var h3 = sec.querySelector('h3');
+		if (h3) {
+			var title = h3.textContent;
+			for (var keyword in sectionColors) {
+				if (title.indexOf(keyword) > -1) {
+					sec.style.borderTopColor = sectionColors[keyword];
+					break;
+				}
+			}
+		}
+	});
+}
+
 return view.extend({
 
 	load: function() {
@@ -115,11 +172,11 @@ return view.extend({
 		o.rmempty = false;
 
 		o = s.option(form.Value, 'webhook', 'Webhook URL',
-			'企业微信群机器人 Webhook 地址 (https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...)');
+			'企业微信群机器人 Webhook 地址');
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'mention', '@成员',
-			'需要 @ 的成员 Userid，多个用 | 分隔。留空不 @');
+			'需要 @ 的成员 Userid，多个用 | 分隔');
 		o.rmempty = true;
 		o.placeholder = 'zhangsan|lisi';
 
@@ -250,7 +307,7 @@ return view.extend({
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'uid', 'UID',
-			'用户 UID，可从 SendKey 自动提取。如 SCT65273T... 自动提取为 65273。留空自动提取');
+			'用户 UID，可从 SendKey 自动提取。留空自动提取');
 		o.rmempty = true;
 		o.placeholder = '自动提取';
 
@@ -272,8 +329,6 @@ return view.extend({
 		};
 
 		// ============================================================
-
-		// ============================================================
 		//  ntfy Notifier (自建推送服务)
 		// ============================================================
 		s = m.section(form.NamedSection, 'ntfy', 'notifier', 'ntfy 推送');
@@ -281,28 +336,27 @@ return view.extend({
 		s.anonymous = false;
 
 		o = s.option(form.Flag, 'enable', '启用',
-			'启用 ntfy 推送通知 (自建或公共服务器)');
+			'启用 ntfy 推送通知');
 		o.default = '0';
 		o.rmempty = false;
 
 		o = s.option(form.Value, 'url', '服务器地址',
-			'ntfy 服务端地址 (如 http://192.168.100.100:2586 或 https://ntfy.sh)');
+			'ntfy 服务端地址');
 		o.default = 'https://ntfy.sh';
 		o.rmempty = false;
-		o.placeholder = 'https://ntfy.sh';
 
 		o = s.option(form.Value, 'topic', 'Topic',
-			'推送主题名称，客户端需订阅此主题');
+			'推送主题名称');
 		o.rmempty = true;
 		o.placeholder = 'my-router-events';
 
 		o = s.option(form.Value, 'token', 'Access Token',
-			'ntfy 访问令牌 (优先级高于用户名密码认证)');
+			'ntfy 访问令牌 (优先于用户名密码)');
 		o.password = true;
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'user', '用户名',
-			'HTTP Basic Auth 用户名 (与 Token 二选一)');
+			'HTTP Basic Auth 用户名');
 		o.rmempty = true;
 		o.depends('token', '');
 
@@ -313,7 +367,7 @@ return view.extend({
 		o.depends('token', '');
 
 		o = s.option(form.ListValue, 'priority', '优先级',
-			'消息优先级，影响通知展示方式');
+			'消息优先级');
 		o.value('min', '最低');
 		o.value('low', '低');
 		o.value('default', '默认');
@@ -321,20 +375,6 @@ return view.extend({
 		o.value('urgent', '紧急');
 		o.default = 'default';
 		o.rmempty = false;
-
-		o = s.option(form.Value, 'tags', '标签',
-			'消息标签 (emoji 或文字，逗号分隔)');
-		o.rmempty = true;
-		o.placeholder = 'warning,router';
-
-		o = s.option(form.Value, 'icon', '图标 URL',
-			'自定义通知图标地址');
-		o.rmempty = true;
-
-		o = s.option(form.Value, 'click', '点击跳转',
-			'点击通知后打开的 URL');
-		o.rmempty = true;
-		o.placeholder = 'http://192.168.1.1/cgi-bin/luci';
 
 		o = s.option(form.Button, '_test_ntfy', '测试 ntfy',
 			'发送测试通知');
@@ -366,12 +406,12 @@ return view.extend({
 		o.rmempty = false;
 
 		o = s.option(form.Value, 'token', 'Token',
-			'PushPlus 推送令牌 (在 pushplus.plus 获取)');
+			'PushPlus 推送令牌');
 		o.password = true;
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'topic', '群组编码',
-			'一对多推送时的群组编码，留空为一对一推送');
+			'一对多推送时的群组编码，留空为一对一');
 		o.rmempty = true;
 
 		o = s.option(form.ListValue, 'template', '消息模板',
@@ -399,7 +439,8 @@ return view.extend({
 			});
 		};
 
-		//  OpenClash Monitor (with cron interval)
+		// ============================================================
+		//  OpenClash Monitor
 		// ============================================================
 		s = m.section(form.NamedSection, 'openclash', 'monitor', 'OpenClash 订阅监控');
 		s.addremove = false;
@@ -428,12 +469,12 @@ return view.extend({
 		o.rmempty = false;
 
 		o = s.option(form.Flag, 'realtime', '实时监听',
-			'使用 inotifywait 监听配置目录，订阅更新后立即推送通知（需安装 inotify-tools）');
+			'inotifywait 监听配置目录，变更后立即推送');
 		o.default = '1';
 		o.rmempty = false;
 
 		o = s.option(form.ListValue, 'debounce', '防抖延迟',
-			'配置变更后等待多久再触发检查，防止批量更新重复触发');
+			'配置变更后等待多久再触发检查');
 		o.value('3', '3 秒');
 		o.value('5', '5 秒');
 		o.value('10', '10 秒');
@@ -445,7 +486,7 @@ return view.extend({
 		o.depends('realtime', '1');
 
 		o = s.option(form.Value, 'paths', '配置目录',
-			'OpenClash 配置文件路径，逗号分隔。留空自动监听 /etc/openclash/config/');
+			'OpenClash 配置文件路径，逗号分隔');
 		o.rmempty = true;
 		o.placeholder = '/etc/openclash/config';
 
@@ -475,7 +516,7 @@ return view.extend({
 		o.rmempty = false;
 
 		o = s.option(form.ListValue, 'delay_threshold', '延迟阈值',
-			'原节点延迟超过此值判定为不可达（故障转移），低于此值认为是手动切换不通知');
+			'原节点延迟超过此值判定为不可达');
 		o.value('1000', '1 秒');
 		o.value('2000', '2 秒');
 		o.value('3000', '3 秒 (推荐)');
@@ -495,10 +536,13 @@ return view.extend({
 		o.rmempty = false;
 
 		o = s.option(form.Value, 'monitor_groups', '监控组过滤',
-			'只监控指定的代理组，逗号分隔。留空监控所有 url-test 组');
+			'只监控指定的代理组，逗号分隔');
 		o.rmempty = true;
 		o.placeholder = '🇭🇰 香港节点,🇯🇵 日本节点';
 
-		return m.render();
+		/* 渲染后注入卡片样式 */
+		var mapEl = m.render();
+		setTimeout(function() { applyCardStyles(mapEl); }, 50);
+		return mapEl;
 	}
 });
