@@ -11,7 +11,6 @@ _token=$(uci -q get eventcenter.ntfy.token 2>/dev/null)
 _user=$(uci -q get eventcenter.ntfy.user 2>/dev/null)
 _pass=$(uci -q get eventcenter.ntfy.pass 2>/dev/null)
 _priority=$(uci -q get eventcenter.ntfy.priority 2>/dev/null)
-_tags=$(uci -q get eventcenter.ntfy.tags 2>/dev/null)
 _icon=$(uci -q get eventcenter.ntfy.icon 2>/dev/null)
 _click=$(uci -q get eventcenter.ntfy.click 2>/dev/null)
 
@@ -36,6 +35,43 @@ _url=$(echo "$_url" | sed 's:/$::')
 # Default values
 [ -z "$_priority" ] && _priority="default"
 
+# Auto-detect tags from message content
+# Priority: UCI config > auto-detect from content
+_tags=$(uci -q get eventcenter.ntfy.tags 2>/dev/null)
+if [ -z "$_tags" ]; then
+    _tags=""
+    # Node change detection
+    case "$_message" in
+        *节点*|*上线*|*下线*|*切换*|*proxy*|*Proxy*|*代理切换*)
+            _tags="node,change"
+            ;;
+    esac
+    # System alert detection
+    if [ -z "$_tags" ]; then
+        case "$_message" in
+            *告警*|*警告*|*错误*|*故障*|*异常*|*alert*|*Alert*|*ERROR*)
+                _tags="alert,warning"
+                ;;
+        esac
+    fi
+    # Recovery detection
+    if [ -z "$_tags" ]; then
+        case "$_message" in
+            *恢复*|*正常*|*已恢复*|*recovery*|*Recovery*)
+                _tags="recovery,ok"
+                ;;
+        esac
+    fi
+    # Update detection
+    if [ -z "$_tags" ]; then
+        case "$_message" in
+            *更新*|*升级*|*版本*|*update*|*Update*)
+                _tags="update,release"
+                ;;
+        esac
+    fi
+fi
+
 # Build curl args
 set -- curl -s -o /dev/null -w "%{http_code}" \
     --connect-timeout 10 \
@@ -52,7 +88,7 @@ elif [ -n "$_user" ] && [ -n "$_pass" ]; then
     set -- "$@" -u "$_user:$_pass"
 fi
 
-# Optional tags
+# Tags
 if [ -n "$_tags" ]; then
     set -- "$@" -H "Tags: $_tags"
 fi
@@ -79,7 +115,7 @@ if [ "$_curl_exit" -ne 0 ]; then
 fi
 
 if [ "$_response" = "200" ]; then
-    echo "OK: ntfy notification sent"
+    echo "OK: ntfy notification sent (tags: ${_tags:-none})"
     exit 0
 else
     echo "Error: ntfy returned HTTP $_response" >&2

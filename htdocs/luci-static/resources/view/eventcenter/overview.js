@@ -43,11 +43,13 @@ return view.extend({
 
 		// Parse notifier configs
 		var notifiers = [
-			{ name: 'Telegram', key: 'telegram', icon: '✈️' },
-			{ name: '企业微信', key: 'wechat', icon: '💬' },
-			{ name: 'Bark', key: 'bark', icon: '🔔' },
-			{ name: 'Server酱', key: 'serverchan', icon: '📨' },
-			{ name: 'Server酱³', key: 'serverchan3', icon: '📱' }
+			{ name: 'Telegram', key: 'telegram', icon: '✈️', checkField: 'token' },
+			{ name: '企业微信', key: 'wechat', icon: '💬', checkField: 'webhook' },
+			{ name: 'Bark', key: 'bark', icon: '🔔', checkField: 'device_key' },
+			{ name: 'Server酱', key: 'serverchan', icon: '📨', checkField: 'sendkey' },
+			{ name: 'Server酱³', key: 'serverchan3', icon: '📱', checkField: 'sendkey' },
+			{ name: 'ntfy', key: 'ntfy', icon: '📢', checkField: 'topic' },
+			{ name: 'PushPlus', key: 'pushplus', icon: '📣', checkField: 'token' }
 		];
 
 		var notifierRows = [];
@@ -56,12 +58,7 @@ return view.extend({
 			var configured = false;
 			try {
 				enabled = uci.get('eventcenter', n.key, 'enable') === '1';
-				// Check if key fields are filled
-				if (n.key === 'telegram') configured = !!uci.get('eventcenter', n.key, 'token');
-				else if (n.key === 'wechat') configured = !!uci.get('eventcenter', n.key, 'webhook');
-				else if (n.key === 'bark') configured = !!uci.get('eventcenter', n.key, 'device_key');
-				else if (n.key === 'serverchan') configured = !!uci.get('eventcenter', n.key, 'sendkey');
-				else if (n.key === 'serverchan3') configured = !!uci.get('eventcenter', n.key, 'sendkey');
+				configured = !!uci.get('eventcenter', n.key, n.checkField);
 			} catch(e) {}
 
 			var statusText, statusColor;
@@ -175,13 +172,8 @@ return view.extend({
 		// Status summary card
 		var enabledNotifiers = notifiers.filter(function(n) {
 			try {
-				var e = uci.get('eventcenter', n.key, 'enable') === '1';
-				var c = false;
-				if (n.key === 'telegram') c = !!uci.get('eventcenter', n.key, 'token');
-				else if (n.key === 'wechat') c = !!uci.get('eventcenter', n.key, 'webhook');
-				else if (n.key === 'bark') c = !!uci.get('eventcenter', n.key, 'device_key');
-				else if (n.key === 'pushplus') c = !!uci.get('eventcenter', n.key, 'token');
-				return e && c;
+				return uci.get('eventcenter', n.key, 'enable') === '1' &&
+					   !!uci.get('eventcenter', n.key, n.checkField);
 			} catch(e) { return false; }
 		}).length;
 

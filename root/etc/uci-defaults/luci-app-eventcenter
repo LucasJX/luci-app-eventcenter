@@ -38,6 +38,24 @@ if [ ! -f /etc/config/eventcenter ]; then
         set eventcenter.serverchan3.sendkey=''
         set eventcenter.serverchan3.uid=''
 
+        set eventcenter.ntfy=notifier
+        set eventcenter.ntfy.enable='0'
+        set eventcenter.ntfy.url='https://ntfy.sh'
+        set eventcenter.ntfy.topic=''
+        set eventcenter.ntfy.token=''
+        set eventcenter.ntfy.user=''
+        set eventcenter.ntfy.pass=''
+        set eventcenter.ntfy.priority='default'
+        set eventcenter.ntfy.tags=''
+        set eventcenter.ntfy.icon=''
+        set eventcenter.ntfy.click=''
+
+        set eventcenter.pushplus=notifier
+        set eventcenter.pushplus.enable='0'
+        set eventcenter.pushplus.token=''
+        set eventcenter.pushplus.topic=''
+        set eventcenter.pushplus.template='markdown'
+
         set eventcenter.openclash=monitor
         set eventcenter.openclash.enable='1'
         set eventcenter.openclash.paths=''
@@ -45,15 +63,38 @@ if [ ! -f /etc/config/eventcenter ]; then
         set eventcenter.openclash.debounce='5'
         set eventcenter.openclash.interval='5'
 
-        set eventcenter.node_health=health
-        set eventcenter.node_health.enable='0'
-        set eventcenter.node_health.interval='5'
-        set eventcenter.node_health.delay_threshold='3000'
-        set eventcenter.node_health.test_url='http://www.gstatic.com/generate_204'
-        set eventcenter.node_health.notify_recovery='1'
-        set eventcenter.node_health.monitor_groups=''
+        set eventcenter.health=health
+        set eventcenter.health.enable='0'
+        set eventcenter.health.interval='5'
+        set eventcenter.health.delay_threshold='3000'
+        set eventcenter.health.test_url='http://www.gstatic.com/generate_204'
+        set eventcenter.health.notify_recovery='1'
+        set eventcenter.health.monitor_groups=''
+
+        set eventcenter.system_health=system_health
+        set eventcenter.system_health.enable='0'
+        set eventcenter.system_health.interval='5'
+
+        set eventcenter.device_monitor=device_monitor
+        set eventcenter.device_monitor.enable='0'
+        set eventcenter.device_monitor.interval='2'
+
         commit eventcenter
 EOUCI
+fi
+
+# Migrate node_health -> health (old installs)
+if uci -q get eventcenter.node_health >/dev/null 2>&1; then
+    if ! uci -q get eventcenter.health >/dev/null 2>&1; then
+        # Rename: copy all options from node_health to health
+        uci -q set eventcenter.health=health
+        for opt in enable interval delay_threshold test_url notify_recovery monitor_groups; do
+            val=$(uci -q get "eventcenter.node_health.${opt}" 2>/dev/null)
+            [ -n "$val" ] && uci -q set "eventcenter.health.${opt}=${val}"
+        done
+        uci -q delete eventcenter.node_health
+        uci -q commit eventcenter
+    fi
 fi
 
 # Ensure new sections exist for upgrades (won't overwrite existing)
@@ -90,6 +131,32 @@ ensure_section notifier serverchan3 \
     enable '0' \
     sendkey '' \
     uid ''
+
+ensure_section notifier ntfy \
+    enable '0' \
+    url 'https://ntfy.sh' \
+    topic '' \
+    token '' \
+    user '' \
+    pass '' \
+    priority 'default' \
+    tags '' \
+    icon '' \
+    click ''
+
+ensure_section notifier pushplus \
+    enable '0' \
+    token '' \
+    topic '' \
+    template 'markdown'
+
+ensure_section system_health system_health \
+    enable '0' \
+    interval '5'
+
+ensure_section device_monitor device_monitor \
+    enable '0' \
+    interval '2'
 
 # Ensure interval exists on monitor section
 if ! uci -q get eventcenter.@monitor[0].interval >/dev/null 2>&1; then

@@ -353,6 +353,52 @@ return view.extend({
 			});
 		};
 
+		// ============================================================
+		//  PushPlus Notifier (微信推送)
+		// ============================================================
+		s = m.section(form.NamedSection, 'pushplus', 'notifier', 'PushPlus (微信推送)');
+		s.addremove = false;
+		s.anonymous = false;
+
+		o = s.option(form.Flag, 'enable', '启用',
+			'启用 PushPlus 微信推送通知');
+		o.default = '0';
+		o.rmempty = false;
+
+		o = s.option(form.Value, 'token', 'Token',
+			'PushPlus 推送令牌 (在 pushplus.plus 获取)');
+		o.password = true;
+		o.rmempty = true;
+
+		o = s.option(form.Value, 'topic', '群组编码',
+			'一对多推送时的群组编码，留空为一对一推送');
+		o.rmempty = true;
+
+		o = s.option(form.ListValue, 'template', '消息模板',
+			'消息展示模板');
+		o.value('markdown', 'Markdown');
+		o.value('html', 'HTML');
+		o.value('txt', '纯文本');
+		o.default = 'markdown';
+		o.rmempty = false;
+
+		o = s.option(form.Button, '_test_pushplus', '测试 PushPlus',
+			'发送测试通知');
+		o.inputtitle = '发送测试';
+		o.inputstyle = 'action';
+		o.onclick = function() {
+			var btn = this;
+			btn.textContent = '发送中...';
+			btn.disabled = true;
+			fs.exec('notifier_pushplus.sh', ['PushPlus 测试消息 - Event Center']).then(function() {
+				btn.textContent = '测试已发送!';
+				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
+			}).catch(function() {
+				btn.textContent = '失败';
+				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
+			});
+		};
+
 		//  OpenClash Monitor (with cron interval)
 		// ============================================================
 		s = m.section(form.NamedSection, 'openclash', 'monitor', 'OpenClash 订阅监控');
