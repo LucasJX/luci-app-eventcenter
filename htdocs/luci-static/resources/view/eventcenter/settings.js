@@ -179,6 +179,74 @@ return view.extend({
 		o.rmempty = true;
 		o.placeholder = '🇭🇰 香港节点,🇯🇵 日本节点';
 
+		// --- System Health Monitor ---
+		s = m.section(form.NamedSection, 'system_health', 'system_health', '系统健康监控');
+		s.addremove = false;
+		s.anonymous = false;
+
+		o = s.option(form.Flag, 'enable', '启用',
+			'监控 CPU、内存、温度、磁盘使用率，超阈值告警');
+		o.default = '0';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'interval', '检测间隔',
+			'系统健康检查的间隔时间');
+		o.value('1', '1 分钟');
+		o.value('2', '2 分钟');
+		o.value('5', '5 分钟');
+		o.value('10', '10 分钟');
+		o.value('15', '15 分钟');
+		o.value('30', '30 分钟');
+		o.default = '2';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'cpu_threshold', 'CPU 告警阈值',
+			'CPU 使用率超过此值时发送告警');
+		o.value('50', '50%');
+		o.value('60', '60%');
+		o.value('70', '70%');
+		o.value('80', '80% (推荐)');
+		o.value('90', '90%');
+		o.value('95', '95%');
+		o.default = '80';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'mem_threshold', '内存告警阈值',
+			'内存使用率超过此值时发送告警');
+		o.value('70', '70%');
+		o.value('75', '75%');
+		o.value('80', '80%');
+		o.value('85', '85% (推荐)');
+		o.value('90', '90%');
+		o.value('95', '95%');
+		o.default = '85';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'disk_threshold', '磁盘告警阈值',
+			'磁盘使用率超过此值时发送告警');
+		o.value('80', '80%');
+		o.value('85', '85%');
+		o.value('90', '90% (推荐)');
+		o.value('95', '95%');
+		o.default = '90';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'temp_threshold', '温度告警阈值',
+			'温度超过此值时发送告警（需要硬件支持温度传感器）');
+		o.value('60', '60°C');
+		o.value('65', '65°C');
+		o.value('70', '70°C');
+		o.value('75', '75°C (推荐)');
+		o.value('80', '80°C');
+		o.value('85', '85°C');
+		o.default = '75';
+		o.rmempty = false;
+
+		o = s.option(form.Flag, 'notify_recovery', '恢复通知',
+			'系统恢复正常时也发送通知');
+		o.default = '1';
+		o.rmempty = false;
+
 		return m.render();
 	}
 });
