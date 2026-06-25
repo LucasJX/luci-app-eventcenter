@@ -39,7 +39,32 @@ return view.extend({
 							fs.write(logPath, '').then(function() { refreshLogs(); });
 						}
 					}
-				}, '🗑 清空日志')
+				}, '🗑 清空日志'),
+				E('button', {
+					'id': 'btn-restart',
+					'style': btnStyle + 'background:#f59e0b;color:#fff',
+					'click': function() {
+						var btn = document.getElementById('btn-restart');
+						btn.textContent = '重启中...';
+						btn.disabled = true;
+						fs.exec('/etc/init.d/eventcenter', ['restart']).then(function(res) {
+							if (res && res.code === 0) {
+								btn.textContent = '✓ 已重启';
+								btn.style.background = '#22c55e';
+							} else {
+								btn.textContent = '✗ 重启失败';
+								btn.style.background = '#dc2626';
+							}
+							btn.style.color = '#fff';
+							setTimeout(function() { btn.textContent = '🔄 重启服务'; btn.style.background = '#f59e0b'; btn.disabled = false; }, 3000);
+						}).catch(function() {
+							btn.textContent = '✗ 重启失败';
+							btn.style.background = '#dc2626';
+							btn.style.color = '#fff';
+							setTimeout(function() { btn.textContent = '🔄 重启服务'; btn.style.background = '#f59e0b'; btn.disabled = false; }, 3000);
+						});
+					}
+				}, '🔄 重启服务')
 			])
 		]);
 

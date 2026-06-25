@@ -1,6 +1,7 @@
 'use strict';
 'require view';
 'require form';
+'require fs';
 'require uci';
 
 /* ── 卡片样式注入 ── */
@@ -264,6 +265,38 @@ return view.extend({
 		o = s.option(form.DynamicList, 'sub_names', '关注的订阅',
 			'只监控这些订阅，留空则监控所有');
 
-		return m.render();
+		var formEl = m.render();
+
+		/* 保存并重启按钮 */
+		var restartBtn = E('button', {
+			'class': 'btn',
+			'style': 'position:absolute;top:8px;right:20px;padding:8px 24px;border-radius:8px;font-weight:600;font-size:0.9em;background:#f59e0b;color:#fff;border:none;cursor:pointer;z-index:10',
+			'click': function() {
+				restartBtn.textContent = '保存并重启中...';
+				restartBtn.disabled = true;
+				uci.save().then(function() {
+					return uci.apply();
+				}).then(function() {
+					return fs.exec('/etc/init.d/eventcenter', ['restart']);
+				}).then(function(res) {
+					if (res && res.code === 0) {
+						restartBtn.textContent = '✓ 已保存并重启';
+						restartBtn.style.background = '#22c55e';
+					} else {
+						restartBtn.textContent = '✓ 已保存（重启失败）';
+						restartBtn.style.background = '#f59e0b';
+					}
+					restartBtn.style.color = '#fff';
+					setTimeout(function() { restartBtn.textContent = '保存并重启'; restartBtn.style.background = '#f59e0b'; restartBtn.disabled = false; }, 3000);
+				}).catch(function() {
+					restartBtn.textContent = '✗ 操作失败';
+					restartBtn.style.background = '#dc2626';
+					restartBtn.style.color = '#fff';
+					setTimeout(function() { restartBtn.textContent = '保存并重启'; restartBtn.style.background = '#f59e0b'; restartBtn.disabled = false; }, 3000);
+				});
+			}
+		}, '保存并重启');
+
+		return E('div', { 'style': 'position:relative' }, [restartBtn, formEl]);
 	}
 });

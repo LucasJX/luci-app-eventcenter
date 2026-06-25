@@ -341,12 +341,72 @@ return view.extend({
 			}
 		}, '保存设置');
 
+		/* 保存并重启按钮 */
+		var restartBtn = E('button', {
+			'class': 'btn cbi-button-action',
+			'style': 'padding:10px 32px;border-radius:8px;font-weight:600;font-size:0.95em;background:#f59e0b;color:#fff;border:none',
+			'click': function() {
+				restartBtn.textContent = '保存中...';
+				restartBtn.disabled = true;
+				/* 先保存所有渠道配置 */
+				saveCfg('telegram', 'enable', document.getElementById('telegram-enable').checked ? '1' : '0');
+				saveCfg('telegram', 'token', document.getElementById('tg-token').value);
+				saveCfg('telegram', 'chatid', document.getElementById('tg-chatid').value);
+				saveCfg('telegram', 'parse_mode', document.getElementById('tg-parse').value);
+				saveCfg('ntfy', 'enable', document.getElementById('ntfy-enable').checked ? '1' : '0');
+				saveCfg('ntfy', 'url', document.getElementById('ntfy-url').value);
+				saveCfg('ntfy', 'topic', document.getElementById('ntfy-topic').value);
+				saveCfg('ntfy', 'token', document.getElementById('ntfy-token').value);
+				saveCfg('ntfy', 'user', document.getElementById('ntfy-user').value);
+				saveCfg('ntfy', 'pass', document.getElementById('ntfy-pass').value);
+				saveCfg('ntfy', 'priority', document.getElementById('ntfy-priority').value);
+				saveCfg('wechat', 'enable', document.getElementById('wechat-enable').checked ? '1' : '0');
+				saveCfg('wechat', 'webhook', document.getElementById('wx-webhook').value);
+				saveCfg('wechat', 'mention', document.getElementById('wx-mention').value);
+				saveCfg('bark', 'enable', document.getElementById('bark-enable').checked ? '1' : '0');
+				saveCfg('bark', 'server', document.getElementById('bark-server').value);
+				saveCfg('bark', 'device_key', document.getElementById('bark-key').value);
+				saveCfg('bark', 'sound', document.getElementById('bark-sound').value);
+				saveCfg('bark', 'group', document.getElementById('bark-group').value);
+				saveCfg('serverchan', 'enable', document.getElementById('serverchan-enable').checked ? '1' : '0');
+				saveCfg('serverchan', 'sendkey', document.getElementById('sc-sendkey').value);
+				saveCfg('serverchan3', 'enable', document.getElementById('serverchan3-enable').checked ? '1' : '0');
+				saveCfg('serverchan3', 'sendkey', document.getElementById('sc3-sendkey').value);
+				saveCfg('serverchan3', 'uid', document.getElementById('sc3-uid').value);
+				saveCfg('pushplus', 'enable', document.getElementById('pushplus-enable').checked ? '1' : '0');
+				saveCfg('pushplus', 'token', document.getElementById('pp-token').value);
+				saveCfg('pushplus', 'topic', document.getElementById('pp-topic').value);
+				saveCfg('pushplus', 'template', document.getElementById('pp-tpl').value);
+				uci.save().then(function() {
+					return uci.apply();
+				}).then(function() {
+					restartBtn.textContent = '重启中...';
+					return fs.exec('/etc/init.d/eventcenter', ['restart']);
+				}).then(function(res) {
+					if (res && res.code === 0) {
+						restartBtn.textContent = '✓ 已保存并重启';
+						restartBtn.style.background = '#22c55e';
+					} else {
+						restartBtn.textContent = '✓ 已保存（重启失败）';
+						restartBtn.style.background = '#f59e0b';
+					}
+					restartBtn.style.color = '#fff';
+					setTimeout(function() { restartBtn.textContent = '保存并重启'; restartBtn.style.background = '#f59e0b'; restartBtn.disabled = false; }, 3000);
+				}).catch(function() {
+					restartBtn.textContent = '✗ 操作失败';
+					restartBtn.style.background = '#dc2626';
+					restartBtn.style.color = '#fff';
+					setTimeout(function() { restartBtn.textContent = '保存并重启'; restartBtn.style.background = '#f59e0b'; restartBtn.disabled = false; }, 3000);
+				});
+			}
+		}, '保存并重启');
+
 		/* 布局 */
 		return E('div', { 'class': 'cbi-map', 'style': 'padding:0' }, [
 			E('h2', { 'style': 'margin-bottom:4px' }, '通知渠道'),
 			E('div', { 'style': 'color:#666;font-size:0.9em;margin-bottom:20px' }, '配置消息推送渠道，可同时启用多个。点击卡片标题可折叠/展开。'),
 			E('div', { 'style': 'display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start' }, cards),
-			E('div', { 'style': 'margin-top:24px;display:flex;justify-content:flex-end' }, [saveBtn])
+			E('div', { 'style': 'margin-top:24px;display:flex;justify-content:flex-end;gap:12px' }, [saveBtn, restartBtn])
 		]);
 	},
 

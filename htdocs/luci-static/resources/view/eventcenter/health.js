@@ -119,10 +119,37 @@ return view.extend({
 			});
 		}
 
+		/* ── 重启服务按钮 ── */
+		var restartBtn = E('button', {
+			'class': 'btn',
+			'style': 'margin-top:20px;padding:10px 32px;border-radius:8px;font-weight:600;font-size:0.95em;background:#f59e0b;color:#fff;border:none;cursor:pointer;float:right',
+			'click': function() {
+				restartBtn.textContent = '重启中...';
+				restartBtn.disabled = true;
+				fs.exec('/etc/init.d/eventcenter', ['restart']).then(function(res) {
+					if (res && res.code === 0) {
+						restartBtn.textContent = '✓ 已重启';
+						restartBtn.style.background = '#22c55e';
+					} else {
+						restartBtn.textContent = '✗ 重启失败';
+						restartBtn.style.background = '#dc2626';
+					}
+					restartBtn.style.color = '#fff';
+					setTimeout(function() { restartBtn.textContent = '重启服务'; restartBtn.style.background = '#f59e0b'; restartBtn.disabled = false; }, 3000);
+				}).catch(function() {
+					restartBtn.textContent = '✗ 重启失败';
+					restartBtn.style.background = '#dc2626';
+					restartBtn.style.color = '#fff';
+					setTimeout(function() { restartBtn.textContent = '重启服务'; restartBtn.style.background = '#f59e0b'; restartBtn.disabled = false; }, 3000);
+				});
+			}
+		}, '重启服务');
+
 		/* ── 布局 ── */
 		return E('div', { 'style': 'padding:0' }, [
-			E('h2', { 'style': 'margin-bottom:4px' }, '节点健康监测'),
-			E('div', { 'style': 'color:#666;font-size:0.9em;margin-bottom:20px' }, '代理组节点状态、延迟和故障切换记录'),
+			E('h2', { 'style': 'margin-bottom:4px;display:inline-block' }, '节点健康监测'),
+			restartBtn,
+			E('div', { 'style': 'color:#666;font-size:0.9em;margin-bottom:20px;clear:both' }, '代理组节点状态、延迟和故障切换记录'),
 
 			stats,
 
