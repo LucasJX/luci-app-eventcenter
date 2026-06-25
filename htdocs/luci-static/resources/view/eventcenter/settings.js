@@ -115,6 +115,106 @@ return view.extend({
 			});
 		};
 
+		// --- Webhook Notifier ---
+		s = m.section(form.NamedSection, 'webhook', 'notifier', 'Webhook 通知');
+		s.addremove = false;
+		s.anonymous = false;
+
+		o = s.option(form.Flag, 'enable', '启用',
+			'启用 Webhook 通知（支持 DingTalk、飞书、Bark 等）');
+		o.default = '0';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'platform', '平台',
+			'选择 Webhook 平台或自定义');
+		o.value('custom', '自定义 Webhook');
+		o.value('dingtalk', '钉钉机器人');
+		o.value('feishu', '飞书机器人');
+		o.value('bark', 'Bark (iOS)');
+		o.default = 'custom';
+		o.rmempty = false;
+		o.depends('enable', '1');
+
+		// Custom webhook options
+		o = s.option(form.Value, 'url', 'Webhook URL',
+			'自定义 Webhook 的请求地址');
+		o.rmempty = true;
+		o.placeholder = 'https://example.com/webhook';
+		o.depends('platform', 'custom');
+
+		o = s.option(form.ListValue, 'method', '请求方法',
+			'HTTP 请求方法');
+		o.value('POST', 'POST');
+		o.value('PUT', 'PUT');
+		o.default = 'POST';
+		o.rmempty = false;
+		o.depends('platform', 'custom');
+
+		o = s.option(form.ListValue, 'content_type', 'Content-Type',
+			'请求内容类型');
+		o.value('application/json', 'JSON');
+		o.value('application/x-www-form-urlencoded', 'Form');
+		o.value('text/plain', 'Plain Text');
+		o.default = 'application/json';
+		o.rmempty = false;
+		o.depends('platform', 'custom');
+
+		o = s.option(form.Value, 'body_template', '请求体模板',
+			'使用 {{message}} 作为消息占位符，留空使用默认 JSON 格式');
+		o.rmempty = true;
+		o.placeholder = '{"text":"{{message}}"}';
+		o.depends('platform', 'custom');
+
+		o = s.option(form.Value, 'headers', '自定义请求头',
+			'多个请求头用 | 分隔，如 Authorization: Bearer xxx|X-Custom: value');
+		o.rmempty = true;
+		o.depends('platform', 'custom');
+
+		// DingTalk options
+		o = s.option(form.Value, 'dingtalk_token', '钉钉 Access Token',
+			'钉钉机器人 Webhook 的 access_token 参数');
+		o.rmempty = true;
+		o.password = true;
+		o.depends('platform', 'dingtalk');
+
+		// Feishu options
+		o = s.option(form.Value, 'feishu_token', '飞书 Webhook Token',
+			'飞书机器人 Webhook URL 中的 token 部分');
+		o.rmempty = true;
+		o.password = true;
+		o.depends('platform', 'feishu');
+
+		// Bark options
+		o = s.option(form.Value, 'bark_server', 'Bark 服务器',
+			'Bark 推送服务器地址（默认官方服务器）');
+		o.default = 'https://api.day.app';
+		o.rmempty = true;
+		o.depends('platform', 'bark');
+
+		o = s.option(form.Value, 'bark_key', 'Bark Key',
+			'Bark 推送 Key（在 Bark App 中获取）');
+		o.rmempty = true;
+		o.password = true;
+		o.depends('platform', 'bark');
+
+		o = s.option(form.Button, '_test_webhook', '测试 Webhook',
+			'发送测试通知以验证 Webhook 配置');
+		o.inputtitle = '发送测试';
+		o.inputstyle = 'action';
+		o.depends('enable', '1');
+		o.onclick = function() {
+			var btn = this;
+			btn.textContent = '发送中...';
+			btn.disabled = true;
+			fs.exec('/usr/bin/notifier_webhook.sh', ['test']).then(function() {
+				btn.textContent = '测试已发送!';
+				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
+			}).catch(function() {
+				btn.textContent = '失败';
+				setTimeout(function() { btn.textContent = '发送测试'; btn.disabled = false; }, 2000);
+			});
+		};
+
 		// --- OpenClash Monitor ---
 		s = m.section(form.NamedSection, 'openclash', 'monitor', 'OpenClash 订阅监控');
 		s.addremove = false;
