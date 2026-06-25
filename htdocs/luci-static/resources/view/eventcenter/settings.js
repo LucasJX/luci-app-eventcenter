@@ -247,6 +247,35 @@ return view.extend({
 		o.default = '1';
 		o.rmempty = false;
 
+		// --- Device Monitor ---
+		s = m.section(form.NamedSection, 'device_monitor', 'device_monitor', '设备上下线监控');
+		s.addremove = false;
+		s.anonymous = false;
+
+		o = s.option(form.Flag, 'enable', '启用',
+			'监控指定设备的上线和离线状态');
+		o.default = '0';
+		o.rmempty = false;
+
+		o = s.option(form.ListValue, 'interval', '检测间隔',
+			'检查设备状态的间隔时间');
+		o.value('1', '1 分钟');
+		o.value('2', '2 分钟');
+		o.value('5', '5 分钟');
+		o.value('10', '10 分钟');
+		o.default = '1';
+		o.rmempty = false;
+
+		o = s.option(form.Value, 'track_macs', '监控设备 MAC',
+			'要监控的设备 MAC 地址，逗号分隔（大写，如 AA:BB:CC:DD:EE:FF）');
+		o.rmempty = true;
+		o.placeholder = 'AA:BB:CC:DD:EE:FF,11:22:33:44:55:66';
+
+		o = s.option(form.Flag, 'notify_recovery', '上线通知',
+			'设备重新上线时也发送通知');
+		o.default = '1';
+		o.rmempty = false;
+
 		return m.render();
 	}
 });

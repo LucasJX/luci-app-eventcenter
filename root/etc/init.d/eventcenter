@@ -73,6 +73,28 @@ start_service() {
         logger -t eventcenter "system-health monitoring enabled (interval=${sys_interval}min)"
     fi
 
+    # --- Device monitoring ---
+    local device_enable
+    device_enable=$(uci -q get eventcenter.@device_monitor[0].enable 2>/dev/null)
+    if [ "$device_enable" = "1" ]; then
+        local device_interval
+        device_interval=$(uci -q get eventcenter.@device_monitor[0].interval 2>/dev/null || echo "1")
+        [ -z "$device_interval" ] && device_interval=1
+
+        local device_cron
+        if [ "$device_interval" -ge 60 ] 2>/dev/null && [ $(( device_interval % 60 )) -eq 0 ] 2>/dev/null; then
+            local device_hours=$(( device_interval / 60 ))
+            device_cron="0 */${device_hours} * * *"
+        else
+            device_cron="*/${device_interval} * * * *"
+        fi
+
+        # Always update (remove old, add new)
+        sed -i '/eventcenter_check_device_monitor/d' /etc/crontabs/root 2>/dev/null
+        echo "${device_cron} /usr/bin/eventcenter check device-monitor" >> /etc/crontabs/root
+        logger -t eventcenter "device-monitor enabled (interval=${device_interval}min)"
+    fi
+
     # --- Watcher setup ---
     local realtime
     realtime=$(uci -q get eventcenter.@monitor[0].realtime 2>/dev/null)
@@ -105,6 +127,7 @@ stop_service() {
     sed -i '/eventcenter_check_openclash/d' /etc/crontabs/root
     sed -i '/eventcenter_check_node_health/d' /etc/crontabs/root
     sed -i '/eventcenter_check_system_health/d' /etc/crontabs/root
+    sed -i '/eventcenter_check_device_monitor/d' /etc/crontabs/root
     logger -t eventcenter "service stopped"
 }
 
