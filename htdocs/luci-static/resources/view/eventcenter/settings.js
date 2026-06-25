@@ -196,7 +196,7 @@ return view.extend({
 		o.rmempty = false;
 
 		// --- Device Monitor ---
-		s = m.section(form.NamedSection, 'device', 'monitor', '设备上下线监控');
+		s = m.section(form.NamedSection, 'device_monitor', 'device_monitor', '设备上下线监控');
 		s.addremove = false;
 		s.anonymous = false;
 
@@ -219,7 +219,7 @@ return view.extend({
 		o.rmempty = true;
 
 		// --- System Health Monitor ---
-		s = m.section(form.NamedSection, 'system_health', 'monitor', '系统健康监控');
+		s = m.section(form.NamedSection, 'system_health', 'system_health', '系统健康监控');
 		s.addremove = false;
 		s.anonymous = false;
 
