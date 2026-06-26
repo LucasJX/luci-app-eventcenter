@@ -148,6 +148,18 @@ dedup_clear() {
 
 # --- Message Formatting ---
 
+# source_display_name <source>
+# Maps internal source names to user-friendly display names
+source_display_name() {
+    case "$1" in
+        openclash)    printf 'OpenClash' ;;
+        system)       printf 'OpenWrt' ;;
+        sub)          printf '订阅监控' ;;
+        eventcenter)  printf '事件中心' ;;
+        *)            printf '%s' "$1" ;;
+    esac
+}
+
 # format_message <template> <source> <event> <level> <title> <message>
 # Formats a notification message. Supports %SOURCE%, %EVENT%, %LEVEL%, %TITLE%, %MESSAGE%, %TIME%
 # If message is pre-formatted (contains structured report), use it as-is
@@ -171,8 +183,10 @@ format_message() {
     _time=$(date '+%Y-%m-%d %H:%M:%S')
 
     if [ -z "$_template" ]; then
-        # Default template using printf for real newlines
-        _template=$(printf '*事件中心*\n\n📋 *%%TITLE%%*\n\n%%MESSAGE%%\n\n🔹 来源: `%%SOURCE%%`\n🔹 事件: `%%EVENT%%`\n🔹 级别: %%LEVEL%%\n🕐 %%TIME%%')
+        # Dynamic template: main title from source, subtitle from event title
+        local _display_source
+        _display_source=$(source_display_name "$_source")
+        _template=$(printf '*%s*\n\n%%TITLE%%\n\n%%MESSAGE%%' "$_display_source")
     fi
 
     # Use awk for safe substitution
