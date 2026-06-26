@@ -27,18 +27,24 @@ var EC_CSS = [
 	'.cbi-button-apply { background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:10px 24px;cursor:pointer;font-weight:600 }',
 
 			'.ec-muted{color:var(--text-color-secondary,#666)}',
+			'.ec-stat-on{background:#d4edda;color:#155724}',
+			'.ec-stat-off{background:#f8d7da;color:#721224}',
+			'.ec-stat-blue{background:#e7f3ff;color:#004085}',
+			'.ec-stat-warn{background:#fef2f2;color:#dc2626}',
+			'.ec-stat-ok{background:#d4edda;color:#155724}',
+			'.ec-badge-fail{margin-left:8px;padding:2px 6px;border-radius:4px;background:#fef2f2;color:#dc2626;font-size:0.8em}',
 		].join(' ');
 var st = document.createElement('style'); st.textContent = EC_CSS; document.head.appendChild(st);
 /* 暗夜模式检测（兼容 Argon 主题手动切换） */
-(function(){if(document.cookie.indexOf('argonDarkMode=1')>-1||window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('ec-dark');var s=document.createElement('style');s.textContent='.ec-dark .ec-card,.ec-dark .cbi-section{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important;border-top-color:#374151!important}.ec-dark .ec-table th{border-bottom-color:#333!important;color:#9ca3af!important}.ec-dark .ec-table td{border-bottom-color:#2a2a3e!important}.ec-dark .ec-on{background:#064e3b;color:#6ee7b7}.ec-dark .ec-off{background:#7f1d1d;color:#fca5a5}.ec-dark .cbi-page-actions{border-top-color:#374151!important}.ec-dark .cbi-map>.cbi-map-descr{color:#9ca3af!important}.ec-dark .cbi-value>.cbi-value-title{color:#d1d5db!important}.ec-dark .cbi-value input[type=text],.ec-dark .cbi-value select{border-color:#374151!important;background:#1e1e2e!important;color:#e5e7eb!important}.ec-dark .cbi-value .cbi-input-description{color:#9ca3af!important}.ec-dark .ec-muted{color:#9ca3af!important}.ec-dark h3{background:#333!important;color:#ccc!important}';document.head.appendChild(s)})()
+(function(){if(document.cookie.indexOf('argonDarkMode=1')>-1||window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('ec-dark');var s=document.createElement('style');s.textContent='.ec-dark .ec-card,.ec-dark .cbi-section{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important;border-top-color:#374151!important}.ec-dark .ec-table th{border-bottom-color:#333!important;color:#9ca3af!important}.ec-dark .ec-table td{border-bottom-color:#2a2a3e!important}.ec-dark .ec-on{background:#064e3b;color:#6ee7b7}.ec-dark .ec-off{background:#7f1d1d;color:#fca5a5}.ec-dark .cbi-page-actions{border-top-color:#374151!important}.ec-dark .cbi-map>.cbi-map-descr{color:#9ca3af!important}.ec-dark .cbi-value>.cbi-value-title{color:#d1d5db!important}.ec-dark .cbi-value input[type=text],.ec-dark .cbi-value select{border-color:#374151!important;background:#1e1e2e!important;color:#e5e7eb!important}.ec-dark .cbi-value .cbi-input-description{color:#9ca3af!important}.ec-dark .ec-muted{color:#9ca3af!important}.ec-dark h3{background:#333!important;color:#ccc!important}.ec-dark .ec-stat-on{background:#064e3b;color:#6ee7b7}.ec-dark .ec-stat-off{background:#7f1d1d;color:#fca5a5}.ec-dark .ec-stat-blue{background:#1e3a5f;color:#93c5fd}.ec-dark .ec-stat-warn,.ec-dark .ec-badge-fail{background:#7f1d1d;color:#fca5a5}.ec-dark .ec-stat-ok{background:#064e3b;color:#6ee7b7}';document.head.appendChild(s)})()
 
 function statusDot(color) {
 	return E('span', { 'class': 'ec-dot', 'style': 'background:' + color });
 }
 
-function statCard(value, label, bg, color) {
-	return E('div', { 'class': 'ec-stat', 'style': 'background:' + bg }, [
-		E('div', { 'style': 'font-size:1.6em;font-weight:bold;color:' + color }, value),
+function statCard(value, label, cls) {
+	return E('div', { 'class': 'ec-stat ' + (cls || '') }, [
+		E('div', { 'style': 'font-size:1.6em;font-weight:bold' }, value),
 		E('div', { 'class': 'ec-muted', 'style': 'font-size:0.8em;margin-top:4px' }, label)
 	]);
 }
@@ -93,9 +99,9 @@ render: function(data) {
 
 		/* ── 统计卡 ── */
 		var stats = E('div', { 'class': 'ec-stats' }, [
-			statCard(healthEnabled ? '运行中' : '已禁用', '监测服务', healthEnabled ? '#d4edda' : '#f8d7da', healthEnabled ? '#155724' : '#721224'),
-			statCard(stateEntries.length + ' 个', '监控组', '#e7f3ff', '#004085'),
-			statCard(failedEntries.length > 0 ? failedEntries.length + ' 个' : '无', '故障节点', failedEntries.length > 0 ? '#fef2f2' : '#d4edda', failedEntries.length > 0 ? '#dc2626' : '#155724')
+			statCard(healthEnabled ? '运行中' : '已禁用', '监测服务', '', ''),
+			statCard(stateEntries.length + ' 个', '监控组', '', ''),
+			statCard(failedEntries.length > 0 ? failedEntries.length + ' 个' : '无', '故障节点', '', '')
 		]);
 
 		/* ── 当前节点选择 ── */
@@ -109,7 +115,7 @@ render: function(data) {
 					E('td', { 'style': 'font-weight:600' }, entry.group),
 					E('td', {}, [
 						E('span', { 'style': isFailed ? 'color:#dc2626;font-weight:600' : '' }, entry.node),
-						isFailed ? E('span', { 'style': 'margin-left:8px;padding:2px 6px;border-radius:4px;background:#fef2f2;color:#dc2626;font-size:0.8em' }, '⚠ 故障中') : ''
+						isFailed ? E('span', { 'class': 'ec-badge-fail' }, '⚠ 故障中') : ''
 					])
 				]));
 			});
