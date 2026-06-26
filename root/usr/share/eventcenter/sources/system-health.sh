@@ -162,14 +162,17 @@ check() {
         _level="warn"
     fi
 
-    # Disk check
-    get_disk_usage | while IFS='	' read -r _dusage _dpath _dused _dsize; do
+    # Disk check (avoid pipe subshell — use temp file)
+    local _tmp_disk="/tmp/ec_disk_$$"
+    get_disk_usage > "$_tmp_disk" 2>/dev/null
+    while IFS='	' read -r _dusage _dpath _dused _dsize; do
         [ -z "$_dusage" ] && continue
         if [ "$_dusage" -ge "$_disk_thresh" ] 2>/dev/null; then
             _alerts="${_alerts}💿 磁盘 ${_dpath}: ${_dusage}% (${_dused}/${_dsize})\n"
             _level="warn"
         fi
-    done
+    done < "$_tmp_disk"
+    rm -f "$_tmp_disk"
 
     # Save current state (metrics summary)
     printf 'cpu=%s mem=%s temp=%s load=%s\n' "$_cpu" "$_mem" "$_temp" "$_load" > "${STATE_FILE}.tmp"

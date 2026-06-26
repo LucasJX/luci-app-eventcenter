@@ -189,9 +189,9 @@ return view.extend({
 		o.default = 'https://www.google.com/generate_204';
 		o.rmempty = false;
 
-		o = s.option(form.Value, 'timeout', '超时(秒)',
-			'单次探测超时时间');
-		o.default = '5';
+		o = s.option(form.Value, 'delay_threshold', '延迟阈值(ms)',
+			'节点延迟超过此阈值判定为不可达');
+		o.default = '3000';
 		o.datatype = 'uinteger';
 		o.rmempty = false;
 

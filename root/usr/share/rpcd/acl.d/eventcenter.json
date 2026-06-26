@@ -3,12 +3,19 @@
 		"description": "Event Center",
 		"read": {
 			"ubus": {
-				"luci": ["*"]
+				"luci": ["eventcenter"]
+			},
+			"file": {
+				"/tmp/eventcenter.log": ["read"],
+				"/etc/config/eventcenter": ["read"]
 			}
 		},
 		"write": {
 			"ubus": {
-				"luci": ["*"]
+				"luci": ["eventcenter"]
+			},
+			"file": {
+				"/etc/config/eventcenter": ["write"]
 			}
 		}
 	}

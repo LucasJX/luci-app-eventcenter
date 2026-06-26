@@ -60,7 +60,7 @@ make package/luci-app-eventcenter/compile V=s
 ### 方式二：手动安装 ipk
 
 ```bash
-opkg install luci-app-eventcenter_1.0.3-1_all.ipk
+opkg install luci-app-eventcenter_1.3.0-1_all.ipk
 ```
 
 ### 方式三：源码直接部署（开发调试）
@@ -215,6 +215,7 @@ check() {
 
 ## 版本历史
 
+- **v1.3.0** (2026-06-26) — P0 修复：残留代码/日志解析/磁盘告警/默认配置；P1：procd框架/cron安全/dedop并发；P2：共享函数统一/配置校验/依赖补充
 - **v1.0.3** (2026-06-22) — 通知修复 + 国旗自动补全
   - 修复 awk 写入 state 文件时未指定 `-F'\t'` 分隔符，导致含空格的 emoji 节点名被劈断
   - 修复 server:port 提取逻辑，改用逗号分割字段精确匹配，避免 `skip-cert-verify` 等字段干扰

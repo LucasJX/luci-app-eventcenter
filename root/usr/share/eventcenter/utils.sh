@@ -36,6 +36,64 @@ ec_uci_get_section() {
     fi
 }
 
+# --- Region Detection (shared) ---
+
+# detect_region <node_name>
+# Detects region code from node name keywords
+detect_region() {
+    echo "$1" | awk 'BEGIN {
+        # keyword -> region code mapping
+        kw["新加坡"]="SG"; kw["狮城"]="SG"; kw["加拿大"]="CA"; kw["澳大利亚"]="AU"; kw["澳洲"]="AU"
+        kw["香港"]="HK"; kw["台湾"]="TW"; kw["日本"]="JP"; kw["美国"]="US"; kw["韩国"]="KR"
+        kw["德国"]="DE"; kw["法国"]="FR"; kw["英国"]="UK"; kw["荷兰"]="NL"; kw["印度"]="IN"
+        kw["智利"]="CL"; kw["巴西"]="BR"; kw["西班牙"]="ES"; kw["瑞士"]="CH"; kw["瑞典"]="SE"
+        kw["墨西哥"]="MX"; kw["俄罗斯"]="RU"; kw["土耳其"]="TR"; kw["阿根廷"]="AR"; kw["意大利"]="IT"
+    }
+    {
+        n = $0
+        for (k in kw) {
+            if (index(n, k)) { print kw[k]; exit }
+        }
+    }'
+}
+
+# region_emoji <code>
+# Maps region code to flag emoji
+region_emoji() {
+    case "$1" in
+        HK) printf '🇭🇰' ;; TW) printf '🇨🇳' ;; JP) printf '🇯🇵' ;;
+        SG) printf '🇸🇬' ;; US) printf '🇺🇸' ;; KR) printf '🇰🇷' ;;
+        DE) printf '🇩🇪' ;; FR) printf '🇫🇷' ;; UK) printf '🇬🇧' ;;
+        NL) printf '🇳🇱' ;; IN) printf '🇮🇳' ;; CL) printf '🇨🇱' ;;
+        BR) printf '🇧🇷' ;; ES) printf '🇪🇸' ;; CH) printf '🇨🇭' ;;
+        SE) printf '🇸🇪' ;; MX) printf '🇲🇽' ;; CA) printf '🇨🇦' ;;
+        AU) printf '🇦🇺' ;; RU) printf '🇷🇺' ;; TR) printf '🇹🇷' ;;
+        AR) printf '🇦🇷' ;; IT) printf '🇮🇹' ;; *) printf '%s' "$1" ;;
+    esac
+}
+
+# prepend_flag <node_name>
+# Adds a flag emoji prefix if the name doesn't already start with one
+prepend_flag() {
+    local _name="$1"
+    # Check if name already starts with a flag emoji (regional indicator letters)
+    case "$_name" in
+        🇦*|🇧*|🇨*|🇩*|🇪*|🇫*|🇬*|🇭*|🇮*|🇯*|🇰*|🇱*|🇲*|🇳*|🇴*|🇵*|🇶*|🇷*|🇸*|🇹*|🇺*|🇻*|🇼*|🇽*|🇾*|🇿*)
+            echo "$_name"
+            return
+            ;;
+    esac
+    local _r
+    _r=$(detect_region "$_name")
+    if [ -n "$_r" ]; then
+        local _emoji
+        _emoji=$(region_emoji "$_r")
+        echo "${_emoji} ${_name}"
+    else
+        echo "$_name"
+    fi
+}
+
 # --- Logging ---
 
 # log_write <source> <event> <level> <title> <message>
@@ -78,6 +136,7 @@ log_write() {
 # dedup_check <source> <event>
 # Returns 0 if this event should proceed (NOT a duplicate)
 # Returns 1 if it IS a duplicate within TTL
+# Uses flock for concurrency safety
 dedup_check() {
     local _source="$1"
     local _event="$2"
@@ -104,35 +163,45 @@ dedup_check() {
     mkdir -p "$(dirname "$_dedup_path")" 2>/dev/null
     touch "$_dedup_path" 2>/dev/null
 
-    # Check if key exists and is within TTL
-    local _entry
-    _entry=$(grep "^${_key}|" "$_dedup_path" 2>/dev/null | head -1)
-    if [ -n "$_entry" ]; then
-        local _ts
-        _ts=$(echo "$_entry" | cut -d'|' -f2)
-        local _age
-        _age=$(( _now - _ts ))
-        if [ "$_age" -lt "$_ttl" ] 2>/dev/null && [ "$_age" -ge 0 ] 2>/dev/null; then
-            return 1  # duplicate, skip
+    # Use lock file for concurrency safety
+    local _lock_file="${_dedup_path}.lock"
+
+    # Check if key exists and is within TTL (inside lock)
+    local _is_dup=0
+    ( flock 9
+        local _entry
+        _entry=$(grep "^${_key}|" "$_dedup_path" 2>/dev/null | head -1)
+        if [ -n "$_entry" ]; then
+            local _ts
+            _ts=$(echo "$_entry" | cut -d'|' -f2)
+            local _age
+            _age=$(( _now - _ts ))
+            if [ "$_age" -lt "$_ttl" ] 2>/dev/null && [ "$_age" -ge 0 ] 2>/dev/null; then
+                _is_dup=1
+            fi
         fi
-    fi
 
-    # Not a duplicate: add/update entry
-    # Remove old entry for this key first
-    if [ -f "$_dedup_path" ]; then
-        local _tmp="${_dedup_path}.tmp"
-        grep -v "^${_key}|" "$_dedup_path" > "$_tmp" 2>/dev/null
-        mv "$_tmp" "$_dedup_path" 2>/dev/null
-    fi
-    printf '%s|%s\n' "$_key" "$_now" >> "$_dedup_path"
+        if [ "$_is_dup" = "0" ]; then
+            # Not a duplicate: add/update entry
+            # Remove old entry for this key first
+            local _tmp="${_dedup_path}.tmp"
+            grep -v "^${_key}|" "$_dedup_path" > "$_tmp" 2>/dev/null
+            printf '%s|%s\n' "$_key" "$_now" >> "$_tmp"
 
-    # Auto-clean if over max entries
-    local _entry_count
-    _entry_count=$(wc -l < "$_dedup_path" 2>/dev/null || echo 0)
-    if [ "$_entry_count" -gt "$_max_entries" ] 2>/dev/null; then
-        local _tmp="${_dedup_path}.clean"
-        tail -n "$_max_entries" "$_dedup_path" > "$_tmp" 2>/dev/null
-        mv "$_tmp" "$_dedup_path" 2>/dev/null
+            # Auto-clean if over max entries
+            local _entry_count
+            _entry_count=$(wc -l < "$_tmp" 2>/dev/null || echo 0)
+            if [ "$_entry_count" -gt "$_max_entries" ] 2>/dev/null; then
+                tail -n "$_max_entries" "$_tmp" > "${_dedup_path}.clean" 2>/dev/null
+                mv "${_dedup_path}.clean" "$_tmp" 2>/dev/null
+            fi
+
+            mv "$_tmp" "$_dedup_path" 2>/dev/null
+        fi
+    ) 9>"$_lock_file"
+
+    if [ "$_is_dup" = "1" ]; then
+        return 1  # duplicate, skip
     fi
 
     return 0  # not a duplicate
@@ -199,29 +268,30 @@ notify_send() {
     local _message="$1"
 
     # Find all notifier sections from UCI config
-    # uci show output format: eventcenter.telegram=notifier
     local _lines
     _lines=$(uci -q show eventcenter 2>/dev/null | grep '=notifier')
-    local _i=0
-    echo "$_lines" | while IFS= read -r _line; do
+
+    # Use heredoc instead of pipe to avoid subshell variable isolation
+    local _section _enable _notifier_script _result
+    while IFS= read -r _line; do
         [ -z "$_line" ] && continue
 
         # Extract section name: eventcenter.telegram=notifier -> telegram
-        local _section
         _section=$(echo "$_line" | cut -d'.' -f2 | cut -d'=' -f1)
 
-        local _enable
         _enable=$(uci -q get "eventcenter.${_section}.enable" 2>/dev/null)
 
         if [ "$_enable" = "1" ]; then
             # Dispatch to notifier script
-            local _notifier_script="/usr/bin/notifier_${_section}.sh"
+            _notifier_script="/usr/bin/notifier_${_section}.sh"
             if [ -x "$_notifier_script" ]; then
-                "$_notifier_script" "$_message"
+                _result=$("$_notifier_script" "$_message" 2>&1)
+                if [ $? -ne 0 ]; then
+                    echo "Notifier $_section failed: $_result" >&2
+                fi
             fi
         fi
-        _i=$(( _i + 1 ))
-    done
+    done <<< "$_lines"
 }
 
 # --- Log reading ---

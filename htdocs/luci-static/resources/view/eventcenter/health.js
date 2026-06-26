@@ -196,7 +196,7 @@ render: function(data) {
 
 		/* 用 form.Map 包装，让 LuCI 生成标准按钮 */
 		var m = new form.Map('eventcenter', '节点健康', '代理组节点状态、延迟和故障切换记录');
-		var s = m.section(form.NamedSection, 'node_health', 'health', '');
+		var s = m.section(form.NamedSection, 'health', 'health', '');
 		s.addremove = false;
 		s.anonymous = false;
 		s.render = function() { return content; };

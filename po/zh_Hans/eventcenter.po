@@ -1,0 +1,179 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/overview.js
+msgid "Event Center"
+msgstr "事件中心"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/overview.js
+msgid "Events"
+msgstr "事件"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/overview.js
+msgid "Notifications"
+msgstr "通知"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/overview.js
+msgid "Notifiers"
+msgstr "通知通道"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/overview.js
+msgid "Enabled"
+msgstr "已启用"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/overview.js
+msgid "Disabled"
+msgstr "已禁用"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Global Settings"
+msgstr "全局设置"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Enable"
+msgstr "启用"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Log path"
+msgstr "日志路径"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Dedup TTL (seconds)"
+msgstr "去重有效期(秒)"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Telegram Settings"
+msgstr "Telegram 设置"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Token"
+msgstr "Token"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Chat ID"
+msgstr "Chat ID"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Parse Mode"
+msgstr "解析模式"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "WeChat Work Settings"
+msgstr "企业微信设置"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Webhook URL"
+msgstr "Webhook 地址"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Mention"
+msgstr "提及(@)"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Bark Settings"
+msgstr "Bark 设置"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Server URL"
+msgstr "服务器地址"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Device Key"
+msgstr "设备密钥"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Sound"
+msgstr "提示音"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Group"
+msgstr "分组"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "OpenClash Monitoring"
+msgstr "OpenClash 监控"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Realtime monitoring"
+msgstr "实时监听"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Debounce (seconds)"
+msgstr "防抖延迟(秒)"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Check interval (minutes)"
+msgstr "检测间隔(分钟)"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Node Health Monitoring"
+msgstr "节点健康监控"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Delay threshold (ms)"
+msgstr "延迟阈值(ms)"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Test URL"
+msgstr "测试地址"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Notify on recovery"
+msgstr "恢复时通知"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Monitor groups"
+msgstr "监控分组"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "System Health"
+msgstr "系统健康"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Subscription Expiry Monitor"
+msgstr "订阅到期监控"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Check interval (hours)"
+msgstr "检测间隔(小时)"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/settings.js
+msgid "Remind days before expiry"
+msgstr "到期前提醒天数"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/logs.js
+msgid "Event Logs"
+msgstr "事件日志"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/logs.js
+msgid "Refresh"
+msgstr "刷新"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/logs.js
+msgid "Clear"
+msgstr "清除"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/health.js
+msgid "Node Health"
+msgstr "节点健康"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/health.js
+msgid "Latency"
+msgstr "延迟"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/health.js
+msgid "Status"
+msgstr "状态"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/health.js
+msgid "Healthy"
+msgstr "正常"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/health.js
+msgid "Degraded"
+msgstr "降级"
+
+#: applications/luci-app-eventcenter/htdocs/luci-static/resources/view/eventcenter/health.js
+msgid "Failed"
+msgstr "故障"

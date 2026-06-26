@@ -26,8 +26,8 @@ echo $$ > "$WATCHER_PID_FILE"
 
 logger -t eventcenter "watcher: started (dirs=$WATCH_PATHS, debounce=${DEBOUNCE}s)"
 
-# Cleanup on exit
-trap "rm -f $WATCHER_PID_FILE; logger -t eventcenter 'watcher: stopped'; exit 0" INT TERM
+# Cleanup on exit (including fifo cleanup)
+trap "rm -f /tmp/eventcenter_fifo_$$; rm -f $WATCHER_PID_FILE; logger -t eventcenter 'watcher: stopped'; exit 0" INT TERM EXIT
 
 _last_trigger=0
 

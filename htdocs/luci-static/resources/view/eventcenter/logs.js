@@ -35,19 +35,23 @@ return view.extend({
 		var s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
 
 		var entries = logLines.map(function(line) {
-			var m = line.match(/^\[(.+?)\]\s*(\[.+?\])?\s*(.*)/);
-			var time = m ? m[1] : '';
-			var level = m ? (m[2]||'').replace(/[\[\]]/g, '') : '';
-			var msg = m ? m[3] : line;
+			/* Log format: timestamp|source|event|level|title|message */
+			var p = line.split('|');
+			var time = p[0] || '';
+			var source = p[1] || '';
+			var event = p[2] || '';
+			var level = (p[3] || '').toLowerCase();
+			var title = p[4] || '';
+			var message = p.slice(5).join('|') || '';  /* message may contain | */
+			var displayMsg = title + (message ? ' — ' + message : '');
 			var lc = 'var(--text-color-secondary, #666)', lb = 'var(--background-color-secondary, #f3f4f6)';
-			if (level==='error'||level==='ERROR') { lc='#dc2626'; lb='#fee2e2'; }
-			else if (level==='warn'||level==='WARN') { lc='#d97706'; lb='#fef3c7'; }
-			else if (level==='info'||level==='INFO') { lc='#2563eb'; lb='#dbeafe'; }
-			else if (level==='success'||level==='OK') { lc='#059669'; lb='#d1fae5'; }
+			if (level==='error'||level==='critical') { lc='#dc2626'; lb='#fee2e2'; }
+			else if (level==='warn') { lc='#d97706'; lb='#fef3c7'; }
+			else if (level==='info') { lc='#2563eb'; lb='#dbeafe'; }
 			return E('div', { 'class': 'ec-entry' }, [
 				E('span', { 'class': 'ec-time' }, time),
-				level ? E('span', { 'class': 'ec-lvl', 'style': 'background:'+lb+';color:'+lc }, level) : E('span', { 'style': 'min-width:60px' }),
-				E('span', { 'class': 'ec-msg' }, msg)
+				level ? E('span', { 'class': 'ec-lvl', 'style': 'background:'+lb+';color:'+lc }, level.toUpperCase()) : E('span', { 'style': 'min-width:60px' }),
+				E('span', { 'class': 'ec-msg' }, displayMsg)
 			]);
 		});
 

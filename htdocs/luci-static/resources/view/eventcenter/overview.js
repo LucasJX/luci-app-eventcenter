@@ -9,7 +9,7 @@ return view.extend({
 			uci.load('eventcenter'),
 			fs.exec('/usr/share/eventcenter/sources/system-health.sh', ['get']),
 			L.resolveDefault(fs.exec('/usr/share/eventcenter/sources/device-monitor.sh', ['list']), { code: 1, stdout: '' }),
-			L.resolveDefault(fs.exec('/bin/sh', ['-c', 'pgrep eventcenter | wc -l']), { code: 1, stdout: '0' })
+			L.resolveDefault(fs.exec('/bin/sh', ['-c', 'pgrep -f eventcenter >/dev/null 2>&1 && echo 0 || echo 1']), { code: 1, stdout: '1' })
 		]);
 	},
 
@@ -17,11 +17,11 @@ return view.extend({
 		var healthRes = data[1], deviceRes = data[2], pgrepRes = data[3];
 		var deviceLines = [];
 
-		/* 检测进程是否存在 */
+		/* 检测服务是否运行 */
 		var isRunning = false;
 		try {
-			var cnt = parseInt(pgrepRes.stdout) || 0;
-			isRunning = cnt > 0;
+			var _lastLine = (pgrepRes.stdout || '').trim().split('\n').pop();
+			isRunning = (parseInt(_lastLine) === 0);
 		} catch(e) {}
 
 		try {

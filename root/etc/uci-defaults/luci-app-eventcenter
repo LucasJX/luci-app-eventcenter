@@ -79,6 +79,11 @@ if [ ! -f /etc/config/eventcenter ]; then
         set eventcenter.device_monitor.enable='0'
         set eventcenter.device_monitor.interval='2'
 
+        set eventcenter.sub=monitor
+        set eventcenter.sub.enable='0'
+        set eventcenter.sub.check_interval='6'
+        set eventcenter.sub.remind_days='7'
+
         commit eventcenter
 EOUCI
 fi

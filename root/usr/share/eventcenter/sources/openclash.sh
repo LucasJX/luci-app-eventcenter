@@ -20,71 +20,7 @@ extract_node_names() {
     ' "$_file" 2>/dev/null
 }
 
-# detect_region <node_name>
-detect_region() {
-    echo "$1" | awk '{
-        n = $0
-        if      (index(n, "新加坡") || index(n, "狮城"))  print "SG"
-        else if (index(n, "加拿大"))                        print "CA"
-        else if (index(n, "澳大利亚") || index(n, "澳洲"))  print "AU"
-        else if (index(n, "香港"))                          print "HK"
-        else if (index(n, "台湾"))                          print "TW"
-        else if (index(n, "日本"))                          print "JP"
-        else if (index(n, "美国"))                          print "US"
-        else if (index(n, "韩国"))                          print "KR"
-        else if (index(n, "德国"))                          print "DE"
-        else if (index(n, "法国"))                          print "FR"
-        else if (index(n, "英国"))                          print "UK"
-        else if (index(n, "荷兰"))                          print "NL"
-        else if (index(n, "印度"))                          print "IN"
-        else if (index(n, "智利"))                          print "CL"
-        else if (index(n, "巴西"))                          print "BR"
-        else if (index(n, "西班牙"))                        print "ES"
-        else if (index(n, "瑞士"))                          print "CH"
-        else if (index(n, "瑞典"))                          print "SE"
-        else if (index(n, "墨西哥"))                        print "MX"
-        else if (index(n, "俄罗斯"))                        print "RU"
-        else if (index(n, "土耳其"))                        print "TR"
-        else if (index(n, "阿根廷"))                        print "AR"
-        else if (index(n, "意大利"))                        print "IT"
-    }'
-}
-
-# region_emoji <code>
-region_emoji() {
-    case "$1" in
-        HK) printf '🇭🇰' ;; TW) printf '🇨🇳' ;; JP) printf '🇯🇵' ;;
-        SG) printf '🇸🇬' ;; US) printf '🇺🇸' ;; KR) printf '🇰🇷' ;;
-        DE) printf '🇩🇪' ;; FR) printf '🇫🇷' ;; UK) printf '🇬🇧' ;;
-        NL) printf '🇳🇱' ;; IN) printf '🇮🇳' ;; CL) printf '🇨🇱' ;;
-        BR) printf '🇧🇷' ;; ES) printf '🇪🇸' ;; CH) printf '🇨🇭' ;;
-        SE) printf '🇸🇪' ;; MX) printf '🇲🇽' ;; CA) printf '🇨🇦' ;;
-        AU) printf '🇦🇺' ;; RU) printf '🇷🇺' ;; TR) printf '🇹🇷' ;;
-        AR) printf '🇦🇷' ;; IT) printf '🇮🇹' ;; *) printf '%s' "$1" ;;
-    esac
-}
-
-# prepend_flag <node_name>
-# Adds a flag emoji prefix if the name doesn't already start with one
-prepend_flag() {
-    local _name="$1"
-    # Check if name already starts with a flag emoji (regional indicator range U+1F1E6..U+1F1FF)
-    case "$_name" in
-        🇦*|🇧*|🇨*|🇩*|🇪*|🇫*|🇬*|🇭*|🇮*|🇯*|🇰*|🇱*|🇲*|🇳*|🇴*|🇵*|🇶*|🇷*|🇸*|🇹*|🇺*|🇻*|🇼*|🇽*|🇾*|🇿*)
-            echo "$_name"
-            return
-            ;;
-    esac
-    local _r
-    _r=$(detect_region "$_name")
-    if [ -n "$_r" ]; then
-        local _emoji
-        _emoji=$(region_emoji "$_r")
-        echo "${_emoji} ${_name}"
-    else
-        echo "$_name"
-    fi
-}
+# (detect_region, region_emoji, prepend_flag are now in utils.sh)
 
 # build_notification <title> <old_total> <new_total> <added_count> <removed_count> <modified_count> <region_lines> <new_regions> <gone_regions> <added_list> <removed_list> <modified_list>
 # Builds the formatted Telegram message using awk

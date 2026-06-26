@@ -30,18 +30,18 @@ var st = document.createElement('style'); st.textContent = CARD_CSS; document.he
 
 var BORDER_COLORS = {
 	'telegram': '#0088cc', 'ntfy': '#4caf50', 'wechat': '#07c160',
-	'bark': '#ff6b6b', 'pushplus': '#ff9800', 'discord': '#5865f2', 'email': '#ea4335'
+	'bark': '#ff6b6b', 'pushplus': '#ff9800', 'serverchan': '#f2925b', 'serverchan3': '#e8b84b'
 };
 
-/* 通知脚本路径映射 */
+/* 通知脚本路径映射 — 对应 /usr/bin/notifier_xxx.sh */
 var SCRIPT_MAP = {
-	'telegram': '/usr/share/eventcenter/notifiers/telegram.sh',
-	'ntfy': '/usr/share/eventcenter/notifiers/ntfy.sh',
-	'wechat': '/usr/share/eventcenter/notifiers/wechat.sh',
-	'bark': '/usr/share/eventcenter/notifiers/bark.sh',
-	'pushplus': '/usr/share/eventcenter/notifiers/pushplus.sh',
-	'discord': '/usr/share/eventcenter/notifiers/discord.sh',
-	'email': '/usr/share/eventcenter/notifiers/email.sh'
+	'telegram': '/usr/bin/notifier_telegram.sh',
+	'ntfy': '/usr/bin/notifier_ntfy.sh',
+	'wechat': '/usr/bin/notifier_wechat.sh',
+	'bark': '/usr/bin/notifier_bark.sh',
+	'pushplus': '/usr/bin/notifier_pushplus.sh',
+	'serverchan': '/usr/bin/notifier_serverchan.sh',
+	'serverchan3': '/usr/bin/notifier_serverchan3.sh'
 };
 
 return view.extend({
@@ -54,7 +54,7 @@ return view.extend({
 		m = new form.Map('eventcenter', '通知渠道', '配置消息推送渠道，可同时启用多个。');
 
 		/* Telegram */
-		s = m.section(form.NamedSection, 'telegram', 'notify', '✈️ Telegram');
+		s = m.section(form.NamedSection, 'telegram', 'notifier', '✈️ Telegram');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用', '启用 Telegram Bot 推送');
 		o.default = '0'; o.rmempty = false;
@@ -66,7 +66,7 @@ return view.extend({
 		o.value('HTML'); o.value('Markdown'); o.default = 'HTML'; o.depends('enable', '1'); o.rmempty = false;
 
 		/* Ntfy */
-		s = m.section(form.NamedSection, 'ntfy', 'notify', '🔔 Ntfy');
+		s = m.section(form.NamedSection, 'ntfy', 'notifier', '🔔 Ntfy');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用', '启用 Ntfy 自托管推送');
 		o.default = '0'; o.rmempty = false;
@@ -82,7 +82,7 @@ return view.extend({
 		o.password = true; o.depends('enable', '1'); o.rmempty = true;
 
 		/* 企业微信 */
-		s = m.section(form.NamedSection, 'wechat', 'notify', '💬 企业微信');
+		s = m.section(form.NamedSection, 'wechat', 'notifier', '💬 企业微信');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用');
 		o.default = '0'; o.rmempty = false;
@@ -90,7 +90,7 @@ return view.extend({
 		o.depends('enable', '1'); o.rmempty = true;
 
 		/* Bark */
-		s = m.section(form.NamedSection, 'bark', 'notify', '🔔 Bark');
+		s = m.section(form.NamedSection, 'bark', 'notifier', '🔔 Bark');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用');
 		o.default = '0'; o.rmempty = false;
@@ -100,33 +100,29 @@ return view.extend({
 		o.depends('enable', '1'); o.rmempty = true;
 
 		/* PushPlus */
-		s = m.section(form.NamedSection, 'pushplus', 'notify', '📨 PushPlus');
+		s = m.section(form.NamedSection, 'pushplus', 'notifier', '📨 PushPlus');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用');
 		o.default = '0'; o.rmempty = false;
 		o = s.option(form.Value, 'token', 'Token');
 		o.depends('enable', '1'); o.rmempty = true;
 
-		/* Discord */
-		s = m.section(form.NamedSection, 'discord', 'notify', '🎮 Discord');
+		/* Server酱 */
+		s = m.section(form.NamedSection, 'serverchan', 'notifier', '🧧 Server酱');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用');
 		o.default = '0'; o.rmempty = false;
-		o = s.option(form.Value, 'webhook', 'Webhook URL');
+		o = s.option(form.Value, 'sendkey', 'SendKey');
 		o.depends('enable', '1'); o.rmempty = true;
 
-		/* Email */
-		s = m.section(form.NamedSection, 'email', 'notify', '📧 Email');
+		/* Server酱³ */
+		s = m.section(form.NamedSection, 'serverchan3', 'notifier', '🧧 Server酱³');
 		s.addremove = false; s.anonymous = false;
 		o = s.option(form.Flag, 'enable', '启用');
 		o.default = '0'; o.rmempty = false;
-		o = s.option(form.Value, 'smtp_server', 'SMTP 服务器');
+		o = s.option(form.Value, 'sendkey', 'SendKey');
 		o.depends('enable', '1'); o.rmempty = true;
-		o = s.option(form.Value, 'smtp_port', '端口');
-		o.datatype = 'port'; o.depends('enable', '1'); o.rmempty = true;
-		o = s.option(form.Value, 'smtp_user', '发件人');
-		o.depends('enable', '1'); o.rmempty = true;
-		o = s.option(form.Value, 'to', '收件人');
+		o = s.option(form.Value, 'uid', 'UID', '可从 SendKey 自动提取（sctp&lt;uid&gt;t...）');
 		o.depends('enable', '1'); o.rmempty = true;
 
 		return m.render().then(function(node) {
@@ -134,7 +130,7 @@ return view.extend({
 			var sections = node.querySelectorAll('.cbi-section');
 			var channelMap = {
 				'Telegram': 'telegram', 'Ntfy': 'ntfy', '企业微信': 'wechat',
-				'Bark': 'bark', 'PushPlus': 'pushplus', 'Discord': 'discord', 'Email': 'email'
+				'Bark': 'bark', 'PushPlus': 'pushplus', 'Server酱': 'serverchan', 'Server酱³': 'serverchan3'
 			};
 
 			sections.forEach(function(sec) {
