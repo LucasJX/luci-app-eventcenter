@@ -183,10 +183,10 @@ format_message() {
     _time=$(date '+%Y-%m-%d %H:%M:%S')
 
     if [ -z "$_template" ]; then
-        # Dynamic template: main title from source, subtitle from event title
+        # Dynamic template: source name as header, message body from source
         local _display_source
         _display_source=$(source_display_name "$_source")
-        _template=$(printf '*%s*\n\n%%TITLE%%\n\n%%MESSAGE%%' "$_display_source")
+        _template=$(printf '*%s*\n\n%%MESSAGE%%' "$_display_source")
     fi
 
     # Use awk for safe substitution
