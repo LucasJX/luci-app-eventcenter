@@ -106,6 +106,12 @@ check() {
         _ip=$(echo "$_device_info" | cut -f2)
         _hostname=$(echo "$_device_info" | cut -f3)
 
+        # Fallback: try ARP table directly if IP is empty
+        if [ -z "$_ip" ]; then
+            _ip=$(awk -v mac="$(echo "$_mac" | tr 'A-F' 'a-f')" 'tolower($3)==mac {print $1; exit}' /proc/net/arp 2>/dev/null)
+        fi
+        [ -z "$_ip" ] && _ip="N/A"
+
         # Resolve name
         local _name
         _name=$(resolve_device_name "$_mac" "$_ip" "$_hostname")
@@ -118,9 +124,12 @@ check() {
 
         # Check previous state
         local _was_online=0
+        local _prev_ip=""
         if echo "$_prev_state" | grep -q "^${_mac}="; then
-            local _prev_status
-            _prev_status=$(echo "$_prev_state" | grep "^${_mac}=" | cut -d'=' -f2)
+            local _prev_entry _prev_status
+            _prev_entry=$(echo "$_prev_state" | grep "^${_mac}=")
+            _prev_status=$(echo "$_prev_entry" | cut -d'=' -f2 | cut -d',' -f1)
+            _prev_ip=$(echo "$_prev_entry" | cut -d'=' -f2 | cut -d',' -f2)
             [ "$_prev_status" = "1" ] && _was_online=1
         fi
 
@@ -130,7 +139,7 @@ check() {
             printf '%s\t%s\t%s\t%s\n' "online" "$_mac" "$_name" "${_ip:-N/A}" >> "$_tmp_events"
         elif [ "$_is_online" = "0" ] && [ "$_was_online" = "1" ]; then
             # Device went offline
-            printf '%s\t%s\t%s\t%s\n' "offline" "$_mac" "$_name" "${_ip:-N/A}" >> "$_tmp_events"
+            printf '%s\t%s\t%s\t%s\n' "offline" "$_mac" "$_name" "${_prev_ip:-N/A}" >> "$_tmp_events"
         fi
     done
 
@@ -140,11 +149,14 @@ check() {
     echo "$_tracked_macs" | tr ',' '\n' | while read -r _mac; do
         _mac=$(echo "$_mac" | tr 'a-f' 'A-F' | xargs)
         [ -z "$_mac" ] && continue
-        local _status=0
+        local _status=0 _last_ip=""
         if fgrep -qF "$_mac" "$_online_macs"; then
             _status=1
+            _last_ip=$(fgrep -F "$_mac" "$_current_devices" | head -1 | cut -f2)
+        elif [ -n "$_prev_state" ]; then
+            _last_ip=$(echo "$_prev_state" | grep "^${_mac}=" | cut -d'=' -f2 | cut -d',' -f2)
         fi
-        echo "${_mac}=${_status}"
+        echo "${_mac}=${_status},${_last_ip}"
     done > "$_new_state"
     mv "$_new_state" "$STATE_FILE"
 
@@ -163,7 +175,7 @@ check() {
                 _msg=$(printf "%s🟢 *%s* 上线\n   MAC: `%s`\n   IP: `%s`\n\n" "$_msg" "$_name" "$_mac" "$_ip")
             else
                 _offline_count=$(( _offline_count + 1 ))
-                _msg=$(printf "%s🔴 *%s* 离线\n   MAC: `%s`\n\n" "$_msg" "$_name" "$_mac")
+                _msg=$(printf "%s🔴 *%s* 离线\n   MAC: `%s`\n   IP: `%s`\n\n" "$_msg" "$_name" "$_mac" "$_ip")
             fi
         done < "$_tmp_events"
 
@@ -205,9 +217,9 @@ status() {
             [ -z "$_mac" ] && continue
 
             local _status="unknown"
-            if [ -f "$STATE_FILE" ] && grep -q "^${_mac}=1$" "$STATE_FILE"; then
+            if [ -f "$STATE_FILE" ] && grep -q "^${_mac}=1" "$STATE_FILE"; then
                 _status="online"
-            elif [ -f "$STATE_FILE" ] && grep -q "^${_mac}=0$" "$STATE_FILE"; then
+            elif [ -f "$STATE_FILE" ] && grep -q "^${_mac}=0" "$STATE_FILE"; then
                 _status="offline"
             fi
 

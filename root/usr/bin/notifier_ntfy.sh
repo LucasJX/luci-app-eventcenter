@@ -29,6 +29,10 @@ fi
 _title=$(printf '%s' "$_message" | head -1 | sed 's/^[*📊🚀⚠️💚🟡📦📅🔧♻️🚤 ]*//;s/[*]*//g')
 [ -z "$_title" ] && _title="Event Center"
 
+# Remove title line from message body (avoid duplicate in ntfy app)
+# Skip first line and the empty line after it
+_message=$(printf '%s' "$_message" | sed '1{/^$/d};2{/^$/d}' | sed '1d')
+
 # Remove trailing slash from URL
 _url=$(echo "$_url" | sed 's:/$::')
 

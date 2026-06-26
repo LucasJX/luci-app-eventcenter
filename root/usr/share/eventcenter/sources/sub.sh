@@ -13,6 +13,13 @@ extract_sub_info() {
     _sub_name=$(basename "$_file" .yaml)
     _sub_name=$(basename "$_sub_name" .yml)
 
+    # Try to get real subscription name from YAML content
+    local _real_name
+    _real_name=$(grep -i '^name:' "$_file" 2>/dev/null | head -1 | sed 's/^name:[[:space:]]*//;s/[#"].*//;s/[[:space:]]*$//')
+    if [ -n "$_real_name" ]; then
+        _sub_name="$_real_name"
+    fi
+
     # Try to find subscription info in proxy-provider blocks
     local _expire _traffic_used _traffic_total
     _expire=$(awk '
