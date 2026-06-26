@@ -37,5 +37,13 @@
 			"type": "view",
 			"path": "eventcenter/logs"
 		}
+	},
+	"admin/services/eventcenter/notify": {
+		"title": "通知渠道",
+		"order": 18,
+		"action": {
+			"type": "view",
+			"path": "eventcenter/notify"
+		}
 	}
 }

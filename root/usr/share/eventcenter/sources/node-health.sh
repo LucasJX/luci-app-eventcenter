@@ -83,8 +83,6 @@ fetch_proxies_json() {
     _url="http://127.0.0.1:${_port}/proxies"
     _hdr=$(/usr/share/eventcenter/auth_header.sh)
     curl -s -m 10 -H "$_hdr" "$_url" 2>/dev/null
-}/proxies"
-    _hdr="Authorization: Bearer ***    curl -s -m 10 -H "$_hdr" "$_url" 2>/dev/null
 }
 
 # test_node_delay <node_name>
