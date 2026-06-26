@@ -4,14 +4,16 @@
 
 # Source utilities
 . /usr/share/eventcenter/utils.sh
+. /usr/share/eventcenter/aggregate.sh
 
-# engine_emit <source> <event> <level> <title> <message>
+# engine_emit <source> <event> <level> <title> [message]
 # Main event processing pipeline:
 #   1. Check if eventcenter is enabled
 #   2. Dedup check
-#   3. Log the event
-#   4. Format notification message
-#   5. Dispatch to notifiers
+#   3. Aggregate check (if enabled)
+#   4. Log the event
+#   5. Format notification message
+#   6. Dispatch to notifiers
 engine_emit() {
     local _source="$1"
     local _event="$2"
@@ -45,10 +47,22 @@ engine_emit() {
         return 0
     fi
 
-    # 3. Log the event
+    # 3. Aggregate check (check BEFORE add — add creates the file)
+    local _agg_enable
+    _agg_enable=$(ec_uci_get "global.aggregate_enable" "1")
+    if [ "$_agg_enable" = "1" ]; then
+        if aggregate_check "$_source" "$_event"; then
+            aggregate_add "$_source" "$_event" "$_level" "$_title" "$_message"
+            echo "Event aggregated: $_source:$_event" >&2
+            return 0
+        fi
+        aggregate_add "$_source" "$_event" "$_level" "$_title" "$_message"
+    fi
+
+    # 4. Log the event
     log_write "$_source" "$_event" "$_level" "$_title" "$_message"
 
-    # 4. Format and send notification
+    # 5. Format and send notification
     local _formatted
     _formatted=$(format_message "" "$_source" "$_event" "$_level" "$_title" "$_message")
     notify_send "$_formatted"
@@ -58,14 +72,12 @@ engine_emit() {
 }
 
 # engine_test
-# Sends a test notification via ALL enabled notifiers
+# Sends a test notification to verify the pipeline
 engine_test() {
-    echo "Sending test notification via all enabled notifiers..."
-    local _msg
-    _msg=$(format_message "" "eventcenter" "test" "info" \
+    echo "Sending test event..."
+    engine_emit "eventcenter" "test" "info" \
         "Event Center Test" \
-        "If you see this, the pipeline is working." "")
-    notify_send "$_msg"
+        "This is a test notification from Event Center. If you see this, the pipeline is working."
 }
 
 # engine_check <source>
