@@ -2,132 +2,8 @@
 # Event Center - OpenClash Event Source
 # Monitors OpenClash subscription configs per-subscription
 # Each config file = one subscription, separate notifications
-# Supports: Clash YAML, SIP008 JSON, Base64 node lists
 
-# --- Format detection and parsing ---
-
-# detect_file_format <file>
-# Returns: "sip008", "clash_yaml", "base64", or "unknown"
-detect_file_format() {
-    local _file="$1"
-    # Read first non-empty line
-    local _first
-    _first=$(head -20 "$_file" 2>/dev/null | grep -m1 '[^[:space:]]')
-
-    # SIP008 JSON: starts with { or [
-    case "$_first" in
-        \{*|\[*)
-            # Verify it's actually SIP008 (has "server" field)
-            if grep -q '"server"' "$_file" 2>/dev/null; then
-                echo "sip008"
-                return
-            fi
-            echo "unknown"
-            return
-            ;;
-    esac
-
-    # Clash YAML: has "proxies:" section
-    if grep -q '^[[:space:]]*proxies:' "$_file" 2>/dev/null; then
-        echo "clash_yaml"
-        return
-    fi
-
-    # Base64: check if first line is valid base64
-    local _decoded
-    _decoded=$(echo "$_first" | base64 -d 2>/dev/null)
-    if [ -n "$_decoded" ] && echo "$_decoded" | grep -q '://'; then
-        echo "base64"
-        return
-    fi
-
-    echo "unknown"
-}
-
-# parse_sip008 <file>
-# Parses SIP008 JSON format, outputs: name\tserver:port
-parse_sip008() {
-    local _file="$1"
-    local _tmp="${_file}.split_$$"
-    # Split JSON array into one object per line
-    sed 's/},{/}\n{/g' "$_file" 2>/dev/null > "$_tmp"
-    while IFS= read -r _obj; do
-        local _name _server _port
-        _name=$(echo "$_obj" | grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"name"[[:space:]]*:[[:space:]]*"//;s/"$//')
-        _server=$(echo "$_obj" | grep -o '"server"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"server"[[:space:]]*:[[:space:]]*"//;s/"$//')
-        _port=$(echo "$_obj" | grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' | head -1 | grep -o '[0-9]*$')
-
-        # Skip if no name or empty
-        [ -z "$_name" ] && continue
-        # Filter info nodes
-        case "$_name" in
-            *剩余*|*到期*|*套餐*|*距离*|*故障*|*充值*|*流量*|*重置*|*过期*|*expire*|*traffic*|*reset*|*servername*) continue ;;
-        esac
-
-        local _key="${_server}:${_port}"
-        [ "$_key" = ":" ] && _key="unknown"
-        printf '%s\t%s\n' "$_name" "$_key"
-    done < "$_tmp"
-    rm -f "$_tmp"
-}
-
-# parse_base64_list <file>
-# Parses base64-encoded node list (one node://xxx per line after decode)
-parse_base64_list() {
-    local _file="$1"
-    local _tmp="${_file}.decoded_$$"
-    # Ensure trailing newline (base64 -d may not add one)
-    { base64 -d "$_file" 2>/dev/null; echo; } > "$_tmp"
-    while IFS= read -r _line; do
-        [ -z "$_line" ] && continue
-        # Extract name from URI fragment (#name) or use the protocol
-        local _name
-        _name=$(echo "$_line" | sed 's/.*#//;s/%[0-9A-Fa-f][0-9A-Fa-f]/ /g' | head -c 100)
-        [ -z "$_name" ] && _name=$(echo "$_line" | cut -d: -f1)
-        # Filter info nodes
-        case "$_name" in
-            *剩余*|*到期*|*套餐*|*距离*|*故障*|*充值*|*流量*|*重置*|*过期*|*expire*|*traffic*|*reset*|*servername*) continue ;;
-        esac
-        [ -n "$_name" ] && printf '%s\tunknown\n' "$_name"
-    done < "$_tmp"
-    rm -f "$_tmp"
-}
-
-# extract_node_names_multi <file>
-# Auto-detects format and extracts node names
-# Outputs: name\tserver:port (tab-separated)
-extract_node_names_multi() {
-    local _file="$1"
-    local _format
-    _format=$(detect_file_format "$_file")
-
-    case "$_format" in
-        sip008)
-            parse_sip008 "$_file"
-            ;;
-        clash_yaml)
-            local _tmp="${_file}.ynames_$$"
-            extract_node_names "$_file" > "$_tmp"
-            while IFS= read -r _name; do
-                printf '%s\tunknown\n' "$_name"
-            done < "$_tmp"
-            rm -f "$_tmp"
-            ;;
-        base64)
-            parse_base64_list "$_file"
-            ;;
-        *)
-            local _tmp_fb="${_file}.fbnames_$$"
-            extract_node_names "$_file" > "$_tmp_fb"
-            while IFS= read -r _name; do
-                printf '%s\tunknown\n' "$_name"
-            done < "$_tmp_fb"
-            rm -f "$_tmp_fb"
-            ;;
-    esac
-}
-
-# extract_node_names <file> (legacy YAML parser)
+# extract_node_names <file>
 extract_node_names() {
     local _file="$1"
     awk '
@@ -238,24 +114,19 @@ build_notification() {
                 em[kv[1]] = kv[2]
             }
 
-            printf "📦 *%s*\n", title
-            printf "%s → %s `(%s)`\n", old, new, diff
-            if (added+0 > 0) printf "➕ %s ", added
-            if (removed+0 > 0) printf "➖ %s ", removed
-            if (modified+0 > 0) printf "🔄 %s", modified
-            if (added+0 > 0 || removed+0 > 0 || modified+0 > 0) printf "\n"
+            printf "🟡📦 *%s*\n🟡━━━━━━━━━━━━━━━━━━\n📅 %s\n\n📦 *节点总数*\n%s → %s (%s)\n\n📊 *变更统计*\n➕ 新增线路 %s\n➖ 下线线路 %s\n🔄 参数更新 %s", title, ts, old, new, diff, added, removed, modified
 
             has_region = 0
             if (new_regions != "" || gone_regions != "" || regions != "") has_region = 1
 
-            if (has_region) printf "\n🌎 *地区变化*\n"
+            if (has_region) printf "\n\n🌎 *地区变化*"
 
             if (new_regions != "") {
                 n = split(new_regions, nr, "\n")
                 for (i = 1; i <= n; i++) {
                     code = nr[i]; if (code == "") continue
                     e = (code in em) ? em[code] : code
-                    printf "🚀 %s %s\n", e, code
+                    printf "\n🚀 %s %s 新地区上线", e, code
                 }
             }
             if (gone_regions != "") {
@@ -263,7 +134,7 @@ build_notification() {
                 for (i = 1; i <= n; i++) {
                     code = gr[i]; if (code == "") continue
                     e = (code in em) ? em[code] : code
-                    printf "⚠️ %s %s\n", e, code
+                    printf "\n⚠️ %s %s 地区缩减", e, code
                 }
             }
             if (regions != "") {
@@ -272,18 +143,16 @@ build_notification() {
                     split(lines[i], parts, " ")
                     code = parts[1]; delta = parts[2]
                     e = (code in em) ? em[code] : code
-                    printf "%s %s %s\n", e, code, delta
+                    printf "\n%s %s %s", e, code, delta
                 }
             }
 
             if (added_list != "" || removed_list != "" || modified_list != "") {
-                printf "\n📋 *变更明细*\n"
-                if (added_list != "") printf "%s\n", added_list
-                if (removed_list != "") printf "%s\n", removed_list
-                if (modified_list != "") printf "%s\n", modified_list
+                printf "\n\n📋 *主要变化*"
+                if (added_list != "") printf "\n%s", added_list
+                if (removed_list != "") printf "\n%s", removed_list
+                if (modified_list != "") printf "\n%s", modified_list
             }
-
-            printf "\n`%s`", ts
         }'
 }
 
@@ -316,7 +185,23 @@ check_subscription() {
 
     while IFS= read -r _pf; do
         [ -z "$_pf" ] || [ ! -f "$_pf" ] && continue
-        extract_node_names_multi "$_pf" 2>/dev/null >> "$_tmp_current"
+        awk '
+            /^proxies:/ { in_p=1; next }
+            /^(proxy-groups|rules):/ { in_p=0 }
+            in_p && /name:/ {
+                line=$0; sub(/.*name:[[:space:]]*/, "", line); sub(/,.*/, "", line); gsub(/[\047"]/, "", line)
+                if (line ~ /(剩余|到期|套餐|距离|故障|充值|流量|重置|过期|expire|traffic|reset|servername)/ || line == "") next
+                server=""; port=""
+                n=split($0, fields, ",")
+                for (i=1; i<=n; i++) {
+                    gsub(/^[[:space:]]+/, "", fields[i])
+                    if (fields[i] ~ /^server:/) { sub(/.*server:[[:space:]]*/, "", fields[i]); server=fields[i] }
+                    if (fields[i] ~ /^port:/) { sub(/.*port:[[:space:]]*/, "", fields[i]); port=fields[i] }
+                }
+                key = server ":" port; if (key == ":") key = "unknown"
+                print line "\t" key
+            }
+        ' "$_pf" 2>/dev/null >> "$_tmp_current"
     done < "$_tmp_providers"
 
     local _current_total
@@ -459,7 +344,7 @@ check_subscription() {
 # Main entry: iterates each config file as a separate subscription
 check() {
     local _state_dir
-    _state_dir=$(ec_uci_get "monitor.openclash.state_dir" "/tmp/eventcenter_openclash")
+    _state_dir=$(ec_uci_get "openclash.state_dir" "/tmp/eventcenter_openclash")
 
     # Discover config files
     local _config_files=""

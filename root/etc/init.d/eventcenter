@@ -3,6 +3,8 @@
 START=99
 STOP=10
 
+USE_PROCD=1
+
 WATCHER_PID_FILE="/tmp/eventcenter_watcher.pid"
 
 start_service() {
@@ -10,70 +12,110 @@ start_service() {
     enable=$(uci -q get eventcenter.global.enable)
     [ "$enable" != "1" ] && return
 
-    # --- OpenClash cron job setup ---
+    # --- Cron job setup ---
     local interval
-    interval=$(uci -q get eventcenter.@monitor[0].interval 2>/dev/null)
+    interval=$(uci -q get eventcenter.openclash.interval || echo "5")
     [ -z "$interval" ] && interval=5
 
     local cron_expr
-    if [ "$interval" -ge 1440 ] 2>/dev/null && [ $(( interval % 1440 )) -eq 0 ] 2>/dev/null; then
-        local days=$(( interval / 1440 ))
-        cron_expr="0 0 */${days} * *"
-    elif [ "$interval" -ge 60 ] 2>/dev/null && [ $(( interval % 60 )) -eq 0 ] 2>/dev/null; then
+    if [ "$interval" -ge 60 ] 2>/dev/null && [ $(( interval % 60 )) -eq 0 ] 2>/dev/null; then
         local hours=$(( interval / 60 ))
         cron_expr="0 */${hours} * * *"
     else
         cron_expr="*/${interval} * * * *"
     fi
 
-    # Remove old eventcenter cron entries and add new ones
-    grep -v '/usr/bin/eventcenter' /etc/crontabs/root > /tmp/ec_cr_$$ 2>/dev/null
-    echo "${cron_expr} /usr/bin/eventcenter check openclash" >> /tmp/ec_cr_$$
-    cp /tmp/ec_cr_$$ /etc/crontabs/root
-    rm -f /tmp/ec_cr_$$
-    logger -t eventcenter "openclash cron: ${cron_expr} (interval=${interval}min)"
+    # Always update (remove old, add new)
+    sed -i '/eventcenter_check_openclash/d' /etc/crontabs/root 2>/dev/null
+    echo "${cron_expr} /usr/bin/eventcenter check openclash" >> /etc/crontabs/root
 
     # --- Node health monitoring ---
     local health_enable
-    health_enable=$(uci -q get eventcenter.@health[0].enable 2>/dev/null)
-
+    health_enable=$(uci -q get eventcenter.health.enable 2>/dev/null)
     if [ "$health_enable" = "1" ]; then
         local health_interval
-        health_interval=$(uci -q get eventcenter.@health[0].interval 2>/dev/null || echo "5")
+        health_interval=$(uci -q get eventcenter.health.interval 2>/dev/null || echo "5")
         [ -z "$health_interval" ] && health_interval=5
 
         local health_cron
-        if [ "$health_interval" -ge 1440 ] 2>/dev/null && [ $(( health_interval % 1440 )) -eq 0 ] 2>/dev/null; then
-            local health_days=$(( health_interval / 1440 ))
-            health_cron="0 0 */${health_days} * *"
-        elif [ "$health_interval" -ge 60 ] 2>/dev/null && [ $(( health_interval % 60 )) -eq 0 ] 2>/dev/null; then
+        if [ "$health_interval" -ge 60 ] 2>/dev/null && [ $(( health_interval % 60 )) -eq 0 ] 2>/dev/null; then
             local health_hours=$(( health_interval / 60 ))
             health_cron="0 */${health_hours} * * *"
         else
             health_cron="*/${health_interval} * * * *"
         fi
 
+        # Always update (remove old, add new)
+        sed -i '/eventcenter_check_node_health/d' /etc/crontabs/root 2>/dev/null
         echo "${health_cron} /usr/bin/eventcenter check node-health" >> /etc/crontabs/root
-        logger -t eventcenter "node-health cron: ${health_cron} (interval=${health_interval}min)"
+        logger -t eventcenter "node-health monitoring enabled (interval=${health_interval}min)"
+    fi
+
+    # --- System health monitoring ---
+    local sys_health_enable
+    sys_health_enable=$(uci -q get eventcenter.system_health.enable 2>/dev/null)
+    if [ "$sys_health_enable" = "1" ]; then
+        local sys_interval
+        sys_interval=$(uci -q get eventcenter.system_health.interval 2>/dev/null || echo "2")
+        [ -z "$sys_interval" ] && sys_interval=2
+
+        local sys_cron
+        if [ "$sys_interval" -ge 60 ] 2>/dev/null && [ $(( sys_interval % 60 )) -eq 0 ] 2>/dev/null; then
+            local sys_hours=$(( sys_interval / 60 ))
+            sys_cron="0 */${sys_hours} * * *"
+        else
+            sys_cron="*/${sys_interval} * * * *"
+        fi
+
+        # Always update (remove old, add new)
+        sed -i '/eventcenter_check_system_health/d' /etc/crontabs/root 2>/dev/null
+        echo "${sys_cron} /usr/bin/eventcenter check system-health" >> /etc/crontabs/root
+        logger -t eventcenter "system-health monitoring enabled (interval=${sys_interval}min)"
+    fi
+
+    # --- Device monitoring ---
+    local device_enable
+    device_enable=$(uci -q get eventcenter.device_monitor.enable 2>/dev/null)
+    if [ "$device_enable" = "1" ]; then
+        local device_interval
+        device_interval=$(uci -q get eventcenter.device_monitor.interval 2>/dev/null || echo "1")
+        [ -z "$device_interval" ] && device_interval=1
+
+        local device_cron
+        if [ "$device_interval" -ge 60 ] 2>/dev/null && [ $(( device_interval % 60 )) -eq 0 ] 2>/dev/null; then
+            local device_hours=$(( device_interval / 60 ))
+            device_cron="0 */${device_hours} * * *"
+        else
+            device_cron="*/${device_interval} * * * *"
+        fi
+
+        # Always update (remove old, add new)
+        sed -i '/eventcenter_check_device_monitor/d' /etc/crontabs/root 2>/dev/null
+        echo "${device_cron} /usr/bin/eventcenter check device-monitor" >> /etc/crontabs/root
+        logger -t eventcenter "device-monitor enabled (interval=${device_interval}min)"
+    fi
+
+    # --- Aggregate flush (every 5 minutes) ---
+    local agg_enable
+    agg_enable=$(uci -q get eventcenter.@global[0].aggregate_enable 2>/dev/null)
+    if [ "$agg_enable" = "1" ]; then
+        sed -i '/eventcenter_aggregate_flush/d' /etc/crontabs/root 2>/dev/null
+        echo "*/5 * * * * /usr/bin/eventcenter aggregate-flush" >> /etc/crontabs/root
+        logger -t eventcenter "aggregate flush enabled (every 5min)"
     fi
 
     # --- Watcher setup ---
     local realtime
-    realtime=$(uci -q get eventcenter.@monitor[0].realtime 2>/dev/null)
+    realtime=$(uci -q get eventcenter.openclash.realtime 2>/dev/null)
     if [ "$realtime" = "1" ]; then
-        # Stop existing watcher first
-        if [ -f "$WATCHER_PID_FILE" ]; then
-            local _old_pid
-            _old_pid=$(cat "$WATCHER_PID_FILE")
-            kill "$_old_pid" 2>/dev/null
-            rm -f "$WATCHER_PID_FILE"
+        # Check if watcher is already running
+        if [ -f "$WATCHER_PID_FILE" ] && kill -0 "$(cat "$WATCHER_PID_FILE")" 2>/dev/null; then
+            logger -t eventcenter "watcher already running (pid=$(cat "$WATCHER_PID_FILE"))"
+        else
+            /usr/share/eventcenter/watcher.sh &
+            logger -t eventcenter "watcher started (realtime mode)"
         fi
-        /usr/share/eventcenter/watcher.sh &
-        logger -t eventcenter "watcher started (realtime mode)"
     fi
-
-    # Reload cron
-    kill -HUP $(head -1 /var/run/crond.pid 2>/dev/null) 2>/dev/null
 
     logger -t eventcenter "service started (interval=${interval}min, realtime=${realtime:-off})"
 }
@@ -91,17 +133,15 @@ stop_service() {
     fi
 
     # Remove cron tasks
-    grep -v '/usr/bin/eventcenter' /etc/crontabs/root > /tmp/ec_crs_$$ 2>/dev/null
-    cp /tmp/ec_crs_$$ /etc/crontabs/root
-    rm -f /tmp/ec_crs_$$
-
-    # Reload cron
-    kill -HUP $(head -1 /var/run/crond.pid 2>/dev/null) 2>/dev/null
-
+    sed -i '/eventcenter_check_openclash/d' /etc/crontabs/root
+    sed -i '/eventcenter_check_node_health/d' /etc/crontabs/root
+    sed -i '/eventcenter_check_system_health/d' /etc/crontabs/root
+    sed -i '/eventcenter_check_device_monitor/d' /etc/crontabs/root
+    sed -i '/eventcenter_aggregate_flush/d' /etc/crontabs/root
     logger -t eventcenter "service stopped"
 }
 
-restart() {
+reload_service() {
     stop_service
     start_service
 }

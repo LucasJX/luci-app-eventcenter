@@ -89,8 +89,8 @@ fetch_proxies_json() {
 test_node_delay() {
     local _node="$1" _port _url _test_url _timeout _hdr _result _delay
     _port=$(get_clash_port)
-    _test_url=$(ec_uci_get "node_health.test_url" "http://www.gstatic.com/generate_204")
-    _timeout=$(ec_uci_get "node_health.delay_threshold" "3000")
+    _test_url=$(ec_uci_get "health.test_url" "http://www.gstatic.com/generate_204")
+    _timeout=$(ec_uci_get "health.delay_threshold" "3000")
     _hdr=$(/usr/share/eventcenter/auth_header.sh)
 
     local _encoded=$(printf '%s' "$_node" | sed 's/ /%20/g; s/&/%26/g; s/+/%2B/g; s/,/%2C/g; s/:/%3A/g; s/;/%3B/g; s/=/%3D/g; s/?/%3F/g; s/@/%40/g')
@@ -123,7 +123,7 @@ extract_urltest_groups() {
 # Returns 0 if group should be monitored (empty filter = all)
 group_in_filter() {
     local _group="$1" _filter
-    _filter=$(ec_uci_get "node_health.monitor_groups" "")
+    _filter=$(ec_uci_get "health.monitor_groups" "")
     [ -z "$_filter" ] && return 0  # empty = monitor all
     echo "$_filter" | tr ',' '\n' | fgrep -qF "$_group"
 }
@@ -147,12 +147,12 @@ record_latency() {
 
 check() {
     local _state_file _failed_file
-    _state_file=$(ec_uci_get "node_health.state_file" "/tmp/eventcenter_node_state")
+    _state_file=$(ec_uci_get "health.state_file" "/tmp/eventcenter_node_state")
     _failed_file="/etc/eventcenter/failed_nodes"
     mkdir -p /etc/eventcenter 2>/dev/null
 
     local _enable
-    _enable=$(ec_uci_get "node_health.enable" "0")
+    _enable=$(ec_uci_get "health.enable" "0")
     [ "$_enable" != "1" ] && return 0
 
     # Fetch proxy groups from Clash API
@@ -189,7 +189,7 @@ check() {
 
     # Check if recovery notification is enabled
     local _notify_recovery
-    _notify_recovery=$(ec_uci_get "node_health.notify_recovery" "1")
+    _notify_recovery=$(ec_uci_get "health.notify_recovery" "1")
 
     # Compare current vs old, detect failovers and recoveries
     local _tmp_failovers="/tmp/ec_health_failovers_$$"
@@ -252,17 +252,16 @@ check() {
         local _tmp_awk="/tmp/ec_hawk_$$"
         cat > "$_tmp_awk" << 'AWKEOF'
 BEGIN {
-    printf "🚤 *节点自动切换*\n"
-    cmd = "date +\"%H:%M\""
+    printf "\xf0\x9f\x9a\xa8 *节点自动切换*\n"
+    printf "\xf0\x9f\x94\xb4\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\n"
+    cmd = "date +\"%Y-%m-%d %H:%M:%S\""
     cmd | getline ts; close(cmd)
+    printf "\xf0\x9f\x93\x85 %s\n\n", ts
 }
 {
-    printf "\n*%s*\n", $1
-    printf "  ❌ ~~%s~~\n", $2
-    printf "  → ✅ %s\n", $3
-}
-END {
-    printf "\n`%s`\n", ts
+    printf "%s\n", $1
+    printf "  \xe2\x9d\x8c %s (\xe4\xb8\x8d\xe5\x8f\xaf\xe8\xbe\xbe)\n", $2
+    printf "  \xe2\x86\x92 \xe2\x9c\x85 %s\n\n", $3
 }
 AWKEOF
         local _msg
@@ -281,16 +280,15 @@ AWKEOF
         local _tmp_awk_r="/tmp/ec_hawkr_$$"
         cat > "$_tmp_awk_r" << 'AWKEOFR'
 BEGIN {
-    printf "💚 *节点恢复*\n"
-    cmd = "date +\"%H:%M\""
+    printf "\xf0\x9f\x92\x9a *节点恢复*\n"
+    printf "\xf0\x9f\x9f\xa2\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81\n"
+    cmd = "date +\"%Y-%m-%d %H:%M:%S\""
     cmd | getline ts; close(cmd)
+    printf "\xf0\x9f\x93\x85 %s\n\n", ts
 }
 {
-    printf "\n*%s*\n", $1
-    printf "  🔄 %s → %s\n", $2, $3
-}
-END {
-    printf "\n`%s`\n", ts
+    printf "%s\n", $1
+    printf "  \xf0\x9f\x94\x84 %s \xe2\x86\x92 %s\n\n", $2, $3
 }
 AWKEOFR
         local _msg_r
