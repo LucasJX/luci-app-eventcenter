@@ -33,7 +33,7 @@ return view.extend({
 		].join(' ');
 		var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 				/* 暗夜模式检测（兼容 Argon 主题手动切换） */
-				(function(){var bg=getComputedStyle(document.body).backgroundColor,m=bg.match(/\\d+/g);if(m){var lum=(0.299*+m[0]+0.587*+m[1]+0.114*+m[2])/255;if(lum<0.5)document.documentElement.classList.add('ec-dark')}var s=document.createElement('style');s.textContent='.ec-dark .ec-card{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important}.ec-dark .ec-actions{border-top-color:#374151!important}.ec-dark .ec-muted{color:#9ca3af!important}.ec-dark .ec-lvl{background:#1f2937!important}';document.head.appendChild(s)})()
+				(function(){if(document.cookie.indexOf('argonDarkMode=1')>-1||window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('ec-dark');var s=document.createElement('style');s.textContent='.ec-dark .ec-card{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important}.ec-dark .ec-actions{border-top-color:#374151!important}.ec-dark .ec-muted{color:#9ca3af!important}.ec-dark .ec-lvl{background:#1f2937!important}';document.head.appendChild(s)})()
 
 		var entries = logLines.map(function(line) {
 			var p = line.split('|');
