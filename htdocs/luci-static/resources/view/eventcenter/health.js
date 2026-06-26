@@ -25,13 +25,11 @@ var EC_CSS = [
 	'.cbi-value .cbi-input-description { font-size:0.75em;color:var(--text-color-secondary, #888);margin-top:4px }',
 	'.cbi-page-actions { display:flex;justify-content:flex-end;gap:8px;padding:16px 0;margin-top:16px;border-top:1px solid var(--border-color-light, #eee);flex-wrap:wrap }',
 	'.cbi-button-apply { background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:10px 24px;cursor:pointer;font-weight:600 }',
-	'@media (prefers-color-scheme: dark) {',
-	'  .ec-card, .cbi-section { background:var(--background-color-white, #1e1e2e);box-shadow:0 2px 8px rgba(0,0,0,.3) }',
-	'  .ec-table th { border-bottom-color:var(--border-color-light, #333) }',
-	'  .ec-table td { border-bottom-color:var(--border-color-light, #2a2a3e) }',
-	'}'
+
 ].join(' ');
 var st = document.createElement('style'); st.textContent = EC_CSS; document.head.appendChild(st);
+/* 暗夜模式检测（兼容 Argon 主题手动切换） */
+(function(){var bg=getComputedStyle(document.body).backgroundColor,m=bg.match(/\d+/g);if(m){var lum=(0.299*+m[0]+0.587*+m[1]+0.114*+m[2])/255;if(lum<0.5)document.documentElement.classList.add('ec-dark')}var s=document.createElement('style');s.textContent='.ec-dark .ec-card,.ec-dark .cbi-section{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important}.ec-dark .ec-table th{border-bottom-color:#333!important}.ec-dark .ec-table td{border-bottom-color:#2a2a3e!important}.ec-dark .ec-on{background:#064e3b;color:#6ee7b7}.ec-dark .ec-off{background:#7f1d1d;color:#fca5a5}';document.head.appendChild(s)})();
 
 function statusDot(color) {
 	return E('span', { 'class': 'ec-dot', 'style': 'background:' + color });

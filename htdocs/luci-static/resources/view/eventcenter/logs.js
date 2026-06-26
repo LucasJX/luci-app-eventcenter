@@ -27,12 +27,11 @@ return view.extend({
 			'.ec-lvl{display:inline-block;padding:1px 8px;border-radius:10px;font-size:.8em;margin-right:8px;font-weight:500;flex-shrink:0}',
 			'.ec-msg{flex:1;min-width:0;word-break:break-all;color:var(--text-color, #333)}',
 			'.ec-actions{display:flex;justify-content:flex-end;gap:8px;padding:16px 0;margin-top:16px;border-top:1px solid var(--border-color-light, #eee)}',
-			'@media (prefers-color-scheme: dark) {',
-			'  .ec-card{background:var(--background-color-white, #1e1e2e);box-shadow:0 2px 8px rgba(0,0,0,.3)}',
-			'  .ec-entry{border-bottom-color:var(--border-color-light, #333)}',
-			'}'
+
 		].join(' ');
-		var s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
+		var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+				/* 暗夜模式检测（兼容 Argon 主题手动切换） */
+				(function(){var bg=getComputedStyle(document.body).backgroundColor,m=bg.match(/\d+/g);if(m){var lum=(0.299*+m[0]+0.587*+m[1]+0.114*+m[2])/255;if(lum<0.5)document.documentElement.classList.add('ec-dark')}var s=document.createElement('style');s.textContent='.ec-dark .ec-card{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important}';document.head.appendChild(s)})();
 
 		var entries = logLines.map(function(line) {
 			var p = line.split('|');

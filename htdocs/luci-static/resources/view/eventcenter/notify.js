@@ -21,12 +21,11 @@ var CARD_CSS = [
 	'.ec-test-btn { padding:6px 16px;border:1px solid #3b82f6;color:#3b82f6;background:transparent;border-radius:8px;font-size:.85em;cursor:pointer;font-weight:500;margin-top:8px }',
 	'.ec-test-btn:hover { background:rgba(59,130,246,0.1) }',
 	'.ec-test-btn:disabled { opacity:0.6;cursor:not-allowed }',
-	'@media (prefers-color-scheme: dark) {',
-	'  .cbi-section { background:var(--background-color-white, #1e1e2e);box-shadow:0 2px 8px rgba(0,0,0,.3) }',
-	'  .cbi-section > h3 { border-bottom-color:var(--border-color-light, #333) }',
-	'}'
+
 ].join(' ');
 var st = document.createElement('style'); st.textContent = CARD_CSS; document.head.appendChild(st);
+/* 暗夜模式检测（兼容 Argon 主题手动切换） */
+(function(){var bg=getComputedStyle(document.body).backgroundColor,m=bg.match(/\d+/g);if(m){var lum=(0.299*+m[0]+0.587*+m[1]+0.114*+m[2])/255;if(lum<0.5)document.documentElement.classList.add('ec-dark')}var s=document.createElement('style');s.textContent='.ec-dark .cbi-section{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important}.ec-dark .cbi-section>h3{border-bottom-color:#333!important}';document.head.appendChild(s)})();
 
 var BORDER_COLORS = {
 	'telegram': '#0088cc', 'ntfy': '#4caf50', 'wechat': '#07c160',

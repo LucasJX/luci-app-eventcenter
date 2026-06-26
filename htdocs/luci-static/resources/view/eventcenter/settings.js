@@ -24,10 +24,7 @@ var CARD_CSS = [
 	'.cbi-button-reset { background:var(--background-color-secondary, #f0f0f0);color:var(--text-color-secondary, #666);border:none;border-radius:6px;padding:10px 24px;cursor:pointer }',
 	'.cbi-button-apply { background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:10px 24px;cursor:pointer;font-weight:600 }',
 	'.cbi-page-actions { display:flex;justify-content:flex-end;gap:8px;padding:16px 0;margin-top:16px;border-top:1px solid var(--border-color-light, #eee);flex-wrap:wrap }',
-	'@media (prefers-color-scheme: dark) {',
-	'  .cbi-section { background:var(--background-color-white, #1e1e2e);box-shadow:0 2px 8px rgba(0,0,0,.3) }',
-	'  .cbi-section > h3 { border-bottom-color:var(--border-color-light, #333) }',
-	'}'
+
 ].join(' ');
 
 var CARD_COLORS = {
@@ -42,6 +39,8 @@ var CARD_COLORS = {
 var style = document.createElement('style');
 style.textContent = CARD_CSS;
 document.head.appendChild(style);
+		/* 暗夜模式检测（兼容 Argon 主题手动切换） */
+		(function(){var bg=getComputedStyle(document.body).backgroundColor,m=bg.match(/\d+/g);if(m){var lum=(0.299*+m[0]+0.587*+m[1]+0.114*+m[2])/255;if(lum<0.5)document.documentElement.classList.add('ec-dark')}var s=document.createElement('style');s.textContent='.ec-dark .cbi-section{background:#1e1e2e!important;box-shadow:0 2px 8px rgba(0,0,0,.3)!important}.ec-dark .cbi-section>h3{border-bottom-color:#333!important}';document.head.appendChild(s)})();
 
 function applyCardColors() {
 	var sections = document.querySelectorAll('.cbi-section');
