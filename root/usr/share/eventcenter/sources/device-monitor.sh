@@ -17,9 +17,9 @@ get_dhcp_leases() {
     [ -f "$_lease_file" ] || return
 
     awk '{
-        mac = toupper($1)
-        ip = $2
-        name = ($3 == "*" ? "" : $3)
+        mac = toupper($2)
+        ip = $3
+        name = ($4 == "*" ? "" : $4)
         printf "%s\t%s\t%s\n", mac, ip, name
     }' "$_lease_file"
 }
@@ -221,13 +221,23 @@ status() {
 device_list() {
     local _state_file="/tmp/eventcenter_device_state"
     if [ -f "$_state_file" ] && [ -s "$_state_file" ]; then
-        cat "$_state_file"
+        # State file has MAC=STATUS format, convert to MAC\tIP\tSTATUS
+        while IFS='=' read -r _mac _status; do
+            _mac=$(echo "$_mac" | xargs)
+            [ -z "$_mac" ] && continue
+            local _lbl="unknown"
+            [ "$_status" = "1" ] && _lbl="up"
+            [ "$_status" = "0" ] && _lbl="down"
+            # Look up IP from DHCP lease
+            local _ip=""
+            _ip=$(awk -v mac="$(echo "$_mac" | tr 'A-F' 'a-f')" 'tolower($2)==mac {print $3; exit}' /tmp/dhcp.leases 2>/dev/null)
+            [ -z "$_ip" ] && _ip=$(awk -v mac="$(echo "$_mac" | tr 'A-F' 'a-f')" 'tolower($3)==mac {print $1; exit}' /proc/net/arp 2>/dev/null)
+            [ -z "$_ip" ] && _ip="N/A"
+            printf '%s\t%s\t%s\n' "$_mac" "$_ip" "$_lbl"
+        done < "$_state_file"
     else
         # Fallback: show all devices from DHCP lease file
-        local _tmp="/tmp/ec_devlist_fallback"
-        awk '{mac=toupper($2); ip=$3; printf "%s\t%s\tup\n", mac, ip}' /tmp/dhcp.leases 2>/dev/null > "$_tmp"
-        sort -u "$_tmp"
-        rm -f "$_tmp"
+        awk '{mac=toupper($2); ip=$3; printf "%s\t%s\tup\n", mac, ip}' /tmp/dhcp.leases 2>/dev/null | sort -u
     fi
 }
 

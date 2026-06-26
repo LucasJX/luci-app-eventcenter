@@ -3,13 +3,9 @@
 START=99
 STOP=10
 
-USE_PROCD=1
-
-PROCD_DEBUG=0
-
 WATCHER_PID_FILE="/tmp/eventcenter_watcher.pid"
 
-start_service() {
+start() {
     local enable
     enable=$(uci -q get eventcenter.global.enable)
     [ "$enable" != "1" ] && return
@@ -17,134 +13,107 @@ start_service() {
     # --- Cron job setup ---
     setup_cron_jobs
 
-    # --- Watcher as procd instance ---
+    # --- Watcher process ---
     local realtime
     realtime=$(uci -q get eventcenter.openclash.realtime 2>/dev/null)
     if [ "$realtime" = "1" ]; then
-        procd_open_instance "eventcenter_watcher"
-        procd_set_param command /usr/share/eventcenter/watcher.sh
-        procd_set_param respawn 3600 5 5
-        procd_set_param stderr 1
-        procd_set_param stdout 1
-        procd_close_instance
-        logger -t eventcenter "watcher registered as procd instance (realtime mode)"
+        # Start watcher if not already running
+        if ! pgrep -f "watcher.sh" >/dev/null 2>&1; then
+            /usr/share/eventcenter/watcher.sh &
+            echo $! > "$WATCHER_PID_FILE"
+            logger -t eventcenter "watcher started (PID: $!)"
+        else
+            logger -t eventcenter "watcher already running"
+        fi
     fi
 
     logger -t eventcenter "service started (realtime=${realtime:-off})"
 }
 
 setup_cron_jobs() {
-    # Remove all existing eventcenter cron entries first
     local _tmp_cron="/tmp/ec_cron_$$"
-    crontab -l 2>/dev/null | grep -v 'eventcenter' > "$_tmp_cron" 2>/dev/null || : > "$_tmp_cron"
+    crontab -l 2>/dev/null | grep -v "eventcenter" > "$_tmp_cron" 2>/dev/null || : > "$_tmp_cron"
 
-    # --- OpenClash monitoring ---
+    # OpenClash monitoring
     local oc_enable
     oc_enable=$(uci -q get eventcenter.openclash.enable 2>/dev/null)
     if [ "$oc_enable" = "1" ]; then
         local interval
-        interval=$(uci -q get eventcenter.openclash.interval || echo "5")
+        interval=$(uci -q get eventcenter.openclash.interval 2>/dev/null)
         [ -z "$interval" ] && interval=5
-
-        local cron_expr
-        cron_expr=$(minutes_to_cron "$interval")
-        echo "${cron_expr} /usr/bin/eventcenter check openclash" >> "$_tmp_cron"
-        logger -t eventcenter "openclash monitoring enabled (interval=${interval}min)"
+        echo "*/${interval} * * * * /usr/bin/eventcenter check openclash" >> "$_tmp_cron"
     fi
 
-    # --- Node health monitoring ---
+    # Node health monitoring
     local health_enable
     health_enable=$(uci -q get eventcenter.health.enable 2>/dev/null)
     if [ "$health_enable" = "1" ]; then
         local health_interval
-        health_interval=$(uci -q get eventcenter.health.interval 2>/dev/null || echo "5")
+        health_interval=$(uci -q get eventcenter.health.interval 2>/dev/null)
         [ -z "$health_interval" ] && health_interval=5
-
-        local health_cron
-        health_cron=$(minutes_to_cron "$health_interval")
-        echo "${health_cron} /usr/bin/eventcenter check node-health" >> "$_tmp_cron"
-        logger -t eventcenter "node-health monitoring enabled (interval=${health_interval}min)"
+        echo "*/${health_interval} * * * * /usr/bin/eventcenter check node-health" >> "$_tmp_cron"
     fi
 
-    # --- System health monitoring ---
+    # System health monitoring
     local sys_health_enable
     sys_health_enable=$(uci -q get eventcenter.system_health.enable 2>/dev/null)
     if [ "$sys_health_enable" = "1" ]; then
         local sys_interval
-        sys_interval=$(uci -q get eventcenter.system_health.interval 2>/dev/null || echo "5")
+        sys_interval=$(uci -q get eventcenter.system_health.interval 2>/dev/null)
         [ -z "$sys_interval" ] && sys_interval=5
-
-        local sys_cron
-        sys_cron=$(minutes_to_cron "$sys_interval")
-        echo "${sys_cron} /usr/bin/eventcenter check system-health" >> "$_tmp_cron"
-        logger -t eventcenter "system-health monitoring enabled (interval=${sys_interval}min)"
+        echo "*/${sys_interval} * * * * /usr/bin/eventcenter check system-health" >> "$_tmp_cron"
     fi
 
-    # --- Device monitoring ---
+    # Device monitoring
     local device_enable
     device_enable=$(uci -q get eventcenter.device_monitor.enable 2>/dev/null)
     if [ "$device_enable" = "1" ]; then
         local device_interval
-        device_interval=$(uci -q get eventcenter.device_monitor.interval 2>/dev/null || echo "2")
+        device_interval=$(uci -q get eventcenter.device_monitor.interval 2>/dev/null)
         [ -z "$device_interval" ] && device_interval=2
-
-        local device_cron
-        device_cron=$(minutes_to_cron "$device_interval")
-        echo "${device_cron} /usr/bin/eventcenter check device-monitor" >> "$_tmp_cron"
-        logger -t eventcenter "device-monitor enabled (interval=${device_interval}min)"
+        echo "*/${device_interval} * * * * /usr/bin/eventcenter check device-monitor" >> "$_tmp_cron"
     fi
 
-    # --- Subscription expiry monitoring ---
+    # Subscription expiry monitoring
     local sub_enable
     sub_enable=$(uci -q get eventcenter.sub.enable 2>/dev/null)
     if [ "$sub_enable" = "1" ]; then
         local sub_interval
-        sub_interval=$(uci -q get eventcenter.sub.check_interval 2>/dev/null || echo "6")
+        sub_interval=$(uci -q get eventcenter.sub.check_interval 2>/dev/null)
         [ -z "$sub_interval" ] && sub_interval=6
-
-        local sub_cron
-        sub_cron=$(minutes_to_cron "$sub_interval")
-        echo "${sub_cron} /usr/bin/eventcenter check sub" >> "$_tmp_cron"
-        logger -t eventcenter "sub expiry monitoring enabled (interval=${sub_interval}min)"
+        echo "*/${sub_interval} * * * * /usr/bin/eventcenter check sub" >> "$_tmp_cron"
     fi
 
-    # --- Aggregate flush ---
+    # Aggregate flush
     local agg_enable
     agg_enable=$(uci -q get eventcenter.@global[0].aggregate_enable 2>/dev/null)
     if [ "$agg_enable" = "1" ]; then
         echo "*/5 * * * * /usr/bin/eventcenter aggregate-flush" >> "$_tmp_cron"
-        logger -t eventcenter "aggregate flush enabled (every 5min)"
     fi
 
-    # Install new crontab atomically
     crontab "$_tmp_cron" 2>/dev/null
     rm -f "$_tmp_cron"
 }
 
-# Convert minutes to cron expression
-minutes_to_cron() {
-    local _interval="$1"
-    if [ "$_interval" -ge 60 ] 2>/dev/null && [ $(( _interval % 60 )) -eq 0 ] 2>/dev/null; then
-        local _hours=$(( _interval / 60 ))
-        echo "0 */${_hours} * * *"
-    else
-        echo "*/${_interval} * * * *"
-    fi
-}
-
-stop_service() {
-    # Remove all eventcenter cron entries atomically
+stop() {
+    # Remove cron entries
     local _tmp_cron="/tmp/ec_cron_stop_$$"
-    crontab -l 2>/dev/null | grep -v 'eventcenter' > "$_tmp_cron" 2>/dev/null || : > "$_tmp_cron"
+    crontab -l 2>/dev/null | grep -v "eventcenter" > "$_tmp_cron" 2>/dev/null || : > "$_tmp_cron"
     crontab "$_tmp_cron" 2>/dev/null
     rm -f "$_tmp_cron"
 
-    # Cleanup watcher PID file (procd handles process kill)
-    rm -f "$WATCHER_PID_FILE"
+    # Kill watcher
+    if [ -f "$WATCHER_PID_FILE" ]; then
+        kill $(cat "$WATCHER_PID_FILE") 2>/dev/null
+        rm -f "$WATCHER_PID_FILE"
+    fi
+    pkill -f "watcher.sh" 2>/dev/null
 
     logger -t eventcenter "service stopped"
 }
 
-service_triggers() {
-    procd_add_config_trigger "eventcenter" "global" "/etc/init.d/eventcenter" "restart"
+restart() {
+    stop
+    sleep 1
+    start
 }
