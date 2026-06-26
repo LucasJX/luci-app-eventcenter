@@ -8,7 +8,7 @@ return view.extend({
 		return Promise.all([
 			uci.load('eventcenter'),
 			fs.exec('/usr/share/eventcenter/sources/system-health.sh', ['get']),
-			L.resolveDefault(fs.exec('/usr/share/eventcenter/sources/device-monitor.sh', ['list']), { code: 1, stdout: '' }),
+			L.resolveDefault(fs.exec('/bin/sh', ['/usr/share/eventcenter/sources/device-monitor.sh', 'list']), { code: 1, stdout: '' }),
 			L.resolveDefault(fs.exec('/bin/sh', ['-c', 'pgrep -f eventcenter >/dev/null 2>&1 && echo 0 || echo 1']), { code: 1, stdout: '1' })
 		]);
 	},
@@ -28,7 +28,7 @@ return view.extend({
 			if (deviceRes.code === 0 && deviceRes.stdout) {
 				var parts = deviceRes.stdout.split('\n');
 				for (var p = 0; p < parts.length; p++) {
-					if (parts[p].indexOf('|') > 0) deviceLines.push(parts[p]);
+					if (parts[p].indexOf('	') > 0) deviceLines.push(parts[p]);
 				}
 			}
 		} catch(e) {}
@@ -47,7 +47,7 @@ return view.extend({
 
 		var onDevices = 0, offDevices = 0;
 		for (var di = 0; di < deviceLines.length; di++) {
-			if (deviceLines[di].split('|')[3] === 'up') onDevices++;
+			if (deviceLines[di].split('	')[2] === 'up') onDevices++;
 			else offDevices++;
 		}
 
@@ -155,12 +155,12 @@ return view.extend({
 				E('h3', { 'style': 'margin:0 0 16px;font-size:1.05em' }, '🖥️ 设备监控'),
 				E('div', {},
 					deviceLines.map(function(line) {
-						var p = line.split('|');
+						var p = line.split('	');
 						return E('div', { 'class': 'ec-dev' }, [
-							E('span', {}, (p[3]||'down')==='up'?'🟢':'🔴'),
+							E('span', {}, (p[2]||'up')==='up'?'🟢':'🔴'),
 							E('div', { 'style': 'min-width:0' }, [
 								E('div', { 'style': 'font-weight:600' }, p[0]||'未知'),
-								E('div', { 'style': 'font-size:.8em;color:var(--text-color-secondary,#666)' }, (p[1]||'?')+' / '+(p[2]||'?'))
+								E('div', { 'style': 'font-size:.8em;color:var(--text-color-secondary,#666)' }, (p[1]||'?'))
 							])
 						]);
 					})

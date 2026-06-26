@@ -224,8 +224,10 @@ device_list() {
         cat "$_state_file"
     else
         # Fallback: show all devices from DHCP lease file
-        # dhcp.leases format: timestamp MAC IP hostname client-id
-        awk '{mac=toupper($2); ip=$3; printf "%s\t%s\tup\n", mac, ip}' /tmp/dhcp.leases 2>/dev/null | sort -u
+        local _tmp="/tmp/ec_devlist_fallback"
+        awk '{mac=toupper($2); ip=$3; printf "%s\t%s\tup\n", mac, ip}' /tmp/dhcp.leases 2>/dev/null > "$_tmp"
+        sort -u "$_tmp"
+        rm -f "$_tmp"
     fi
 }
 
