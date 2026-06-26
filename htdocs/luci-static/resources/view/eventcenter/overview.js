@@ -79,6 +79,8 @@ return view.extend({
 			'.ec-dev:last-child{border-bottom:none}',
 			'@media (prefers-color-scheme: dark) {',
 			'  .ec-dev{border-bottom-color:var(--border-color-light, #333)}',
+			'  .ec-on{background:rgba(34,197,94,0.15);color:#86efac}',
+			'  .ec-off{background:rgba(239,68,68,0.15);color:#fca5a5}',
 			'}'
 		].join(' ');
 		ec.injectCSS(css);

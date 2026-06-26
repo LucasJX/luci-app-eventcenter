@@ -32,6 +32,7 @@ load: function() {
 
 render: function(data) {
 	var healthEnabled = uci.get('eventcenter', 'health', 'enable') === '1';
+	var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 	var stateOutput = (data[1] && data[1].stdout) ? data[1].stdout.trim() : '';
 	var failedOutput = (data[2] && data[2].stdout) ? data[2].stdout.trim() : '';
 	var latencyOutput = (data[3] && data[3].stdout) ? data[3].stdout.trim() : '';
@@ -69,9 +70,9 @@ render: function(data) {
 
 		/* ── 统计卡 ── */
 		var stats = E('div', { 'class': 'ec-stats' }, [
-			statCard(healthEnabled ? '运行中' : '已禁用', '监测服务', healthEnabled ? '#d4edda' : '#f8d7da', healthEnabled ? '#155724' : '#721224'),
-			statCard(stateEntries.length + ' 个', '监控组', '#e7f3ff', '#004085'),
-			statCard(failedEntries.length > 0 ? failedEntries.length + ' 个' : '无', '故障节点', failedEntries.length > 0 ? '#fef2f2' : '#d4edda', failedEntries.length > 0 ? '#dc2626' : '#155724')
+			statCard(healthEnabled ? '运行中' : '已禁用', '监测服务', isDark ? (healthEnabled ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') : (healthEnabled ? '#d4edda' : '#f8d7da'), isDark ? (healthEnabled ? '#86efac' : '#fca5a5') : (healthEnabled ? '#155724' : '#721224')),
+			statCard(stateEntries.length + ' 个', '监控组', isDark ? 'rgba(59,130,246,0.15)' : '#e7f3ff', isDark ? '#93c5fd' : '#004085'),
+			statCard(failedEntries.length > 0 ? failedEntries.length + ' 个' : '无', '故障节点', isDark ? (failedEntries.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)') : (failedEntries.length > 0 ? '#fef2f2' : '#d4edda'), isDark ? (failedEntries.length > 0 ? '#fca5a5' : '#86efac') : (failedEntries.length > 0 ? '#dc2626' : '#155724'))
 		]);
 
 		/* ── 当前节点选择 ── */
@@ -85,7 +86,7 @@ render: function(data) {
 					E('td', { 'style': 'font-weight:600' }, entry.group),
 					E('td', {}, [
 						E('span', { 'style': isFailed ? 'color:#dc2626;font-weight:600' : '' }, entry.node),
-						isFailed ? E('span', { 'style': 'margin-left:8px;padding:2px 6px;border-radius:4px;background:#fef2f2;color:#dc2626;font-size:0.8em' }, '⚠ 故障中') : ''
+						isFailed ? E('span', { 'style': 'margin-left:8px;padding:2px 6px;border-radius:4px;background:' + (isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2') + ';color:' + (isDark ? '#fca5a5' : '#dc2626') + ';font-size:0.8em' }, '⚠ 故障中') : ''
 					])
 				]));
 			});
