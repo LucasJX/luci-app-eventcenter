@@ -8,7 +8,7 @@
 
 
 /* ── 页面头部组件 ── */
-if(!document.getElementById('ec-hdr-css')){var hs=document.createElement('style');hs.id='ec-hdr-css';hs.textContent='.ec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:14px}.ec-hdr-left h2{margin:0 0 4px;font-size:1.2em;font-weight:700;color:#1f2937}.ec-hdr-left p{margin:0;font-size:.82em;color:#9ca3af}.ec-hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ec-hdr-top{display:flex;align-items:center;gap:8px}.ec-hdr-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}.ec-hdr-status{font-size:.82em;font-weight:500;color:#1f2937}.ec-hdr-bottom{display:flex;align-items:center;gap:6px}.ec-hdr-time{font-size:.78em;color:#9ca3af}.ec-hdr-refresh{background:none;border:none;cursor:pointer;font-size:1em;color:#9ca3af;padding:2px;border-radius:4px;transition:all .15s}.ec-hdr-refresh:hover{background:#f3f4f6;color:#374151}';document.head.appendChild(hs)}
+if(!document.getElementById('ec-hdr-css')){var hs=document.createElement('style');hs.id='ec-hdr-css';hs.textContent='.ec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:14px}.ec-hdr-left h2{margin:0 0 4px;font-size:1.2em;font-weight:700;color:#1f2937}.ec-hdr-left p{margin:0;font-size:.82em;color:#9ca3af}.ec-hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ec-hdr-top{display:flex;align-items:center;gap:8px}.ec-hdr-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}.ec-hdr-status{font-size:.82em;font-weight:500;color:#1f2937}.ec-hdr-bottom{display:flex;align-items:center;gap:6px}.ec-hdr-time{font-size:.78em;color:#9ca3af}.ec-hdr-refresh{background:none;border:none;cursor:pointer;font-size:1em;color:#9ca3af;padding:2px;border-radius:4px;transition:all .15s}.ec-hdr-refresh:hover{background:#f3f4f6;color:#374151}@media(max-width:768px){.ec-hdr{flex-direction:column;align-items:flex-start;gap:8px}.ec-hdr-right{align-items:flex-start}}';document.head.appendChild(hs)}
 function ecMakeHdr(title,subtitle,isRunning){var h=document.createElement('div');h.className='ec-hdr';h.innerHTML='<div class="ec-hdr-left"><h2>'+title+'</h2><p>'+subtitle+'</p></div><div class="ec-hdr-right"><div class="ec-hdr-top"><span class="ec-hdr-dot" style="background:'+(isRunning?'#22c55e':'#ef4444')+'"></span><span class="ec-hdr-status">'+(isRunning?'运行中':'已停止')+'</span></div><div class="ec-hdr-bottom"><span class="ec-hdr-time">最后更新: '+new Date().toLocaleString('zh-CN')+'</span><button class="ec-hdr-refresh" title="刷新">⟳</button></div></div>';h.querySelector('.ec-hdr-refresh').addEventListener('click',function(){window.location.reload()});return h}
 
 return view.extend({
@@ -141,8 +141,8 @@ return view.extend({
                 statusEl.style.color = currentOn ? '#22c55e' : '#9ca3af';
             });
 
-            return E('div', { 'style': 'background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:12px' }, [
-                E('div', { 'style': 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px' }, [
+            return E('div', { 'class': 'ec-notify-card', 'style': 'background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:12px' }, [
+                E('div', { 'class': 'ec-notify-header', 'style': 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px' }, [
                     E('div', { 'style': 'display:flex;align-items:center;gap:10px' }, [
                         E('div', { 'style': 'width:36px;height:36px;border-radius:10px;background:' + ch.color + '15;display:flex;align-items:center;justify-content:center;font-size:1.2em' }, [ch.icon]),
                         E('strong', { 'style': 'font-size:1em;color:#1f2937' }, [ch.label]),
@@ -152,9 +152,9 @@ return view.extend({
                         toggleEl,
                     ])
                 ]),
-                E('div', { 'style': 'display:flex;gap:20px;align-items:stretch' }, [
+                E('div', { 'class': 'ec-notify-body', 'style': 'display:flex;gap:20px;align-items:stretch' }, [
                     fieldsEl,
-                    E('div', { 'style': 'width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:10px' }, [
+                    E('div', { 'class': 'ec-notify-preview', 'style': 'width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:10px' }, [
                         buildPreview(ch),
                         E('div', { 'style': 'text-align:right' }, [testBtn])
                     ])
@@ -163,6 +163,13 @@ return view.extend({
         }
 
         var container = E('div', { 'style': 'padding:0 20px' });
+
+        // 响应式 CSS
+        if(!document.getElementById('ec-notify-responsive')){
+            var rs=document.createElement('style');rs.id='ec-notify-responsive';
+            rs.textContent='@media(max-width:768px){.ec-notify-header{flex-direction:column!important;align-items:flex-start!important;gap:10px!important}.ec-notify-body{flex-direction:column!important}.ec-notify-preview{width:100%!important}}';
+            document.head.appendChild(rs);
+        }
 
         // Header
         var anyEnabled = channels.some(function(ch) { return getVal(ch.section, 'enable') === '1'; });
