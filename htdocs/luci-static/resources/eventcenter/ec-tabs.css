@@ -51,3 +51,6 @@ ul.tabs > li[class~="active"] > a {
   font-size: .75em;
   color: #d1d5db;
 }
+.cbi-page-actions {
+  display: none !important;
+}
