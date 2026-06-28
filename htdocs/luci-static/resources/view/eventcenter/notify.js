@@ -29,52 +29,55 @@ return view.extend({
         var channels = [
             { id: 'telegram', label: 'Telegram', icon: '✈️', color: '#0088cc',
               fields: [
-                  { label: 'Bot Token', value: getVal('telegram', 'bot_token') || '未配置', type: 'password' },
-                  { label: 'Chat ID', value: getVal('telegram', 'chat_id') || '未配置', type: 'password' },
-                  { label: '消息格式', value: getVal('telegram', 'parse_mode') || 'Markdown', type: 'text' }
+                  { label: 'Bot Token', key: 'bot_token', value: getVal('telegram', 'bot_token') || '未配置', type: 'password' },
+                  { label: 'Chat ID', key: 'chat_id', value: getVal('telegram', 'chat_id') || '未配置', type: 'password' },
+                  { label: '消息格式', key: 'parse_mode', value: getVal('telegram', 'parse_mode') || 'Markdown', type: 'text' }
               ],
               previewBg: '#e3f2fd', previewColor: '#1976d2' },
             { id: 'ntfy', label: 'Ntfy', icon: '🔔', color: '#4caf50',
               fields: [
-                  { label: '服务器地址', value: getVal('ntfy', 'url') || '未配置', type: 'text' },
-                  { label: '主题', value: getVal('ntfy', 'topic') || '未配置', type: 'text' },
-                  { label: '用户名', value: getVal('ntfy', 'user') || '未配置', type: 'text' },
-                  { label: '密码', value: getVal('ntfy', 'pass') ? '••••••••' : '未配置', type: 'password' }
+                  { label: '服务器地址', key: 'url', value: getVal('ntfy', 'url') || '未配置', type: 'text' },
+                  { label: '主题', key: 'topic', value: getVal('ntfy', 'topic') || '未配置', type: 'text' },
+                  { label: '用户名', key: 'user', value: getVal('ntfy', 'user') || '未配置', type: 'text' },
+                  { label: '密码', key: 'pass', value: getVal('ntfy', 'pass') ? '••••••••' : '未配置', type: 'password' }
               ],
               previewBg: '#e8f5e9', previewColor: '#2e7d32' },
             { id: 'wecom', label: '企业微信', icon: '💬', color: '#07c160',
               fields: [
-                  { label: 'Webhook URL', value: getVal('wechat', 'webhook') || '未配置', type: 'text' }
+                  { label: 'Webhook URL', key: 'webhook', value: getVal('wechat', 'webhook') || '未配置', type: 'text' }
               ],
               previewBg: '#f0fdf4', previewColor: '#07c160' },
             { id: 'bark', label: 'Bark', icon: '🔔', color: '#ff3b30',
               fields: [
-                  { label: '服务器地址', value: getVal('bark', 'server') || '未配置', type: 'text' },
-                  { label: '设备 Key', value: getVal('bark', 'key') || '未配置', type: 'text' }
+                  { label: '服务器地址', key: 'server', value: getVal('bark', 'server') || '未配置', type: 'text' },
+                  { label: '推送 Key', key: 'key', value: getVal('bark', 'key') || '未配置', type: 'password' }
               ],
               previewBg: '#fff3f0', previewColor: '#ff3b30' },
             { id: 'pushplus', label: 'PushPlus', icon: '➕', color: '#00bcd4',
               fields: [
-                  { label: 'Token', value: getVal('pushplus', 'token') || '未配置', type: 'text' }
+                  { label: 'Token', key: 'token', value: getVal('pushplus', 'token') || '未配置', type: 'text' }
               ],
               previewBg: '#e0f7fa', previewColor: '#00acc1' },
             { id: 'serverchan', label: 'Server酱', icon: '📮', color: '#ff6b6b',
               fields: [
-                  { label: 'SendKey', value: getVal('serverchan', 'key') || '未配置', type: 'text' },
-                  { label: '消息标题 (可选)', value: getVal('serverchan', 'title') || '可选, 自定义消息标题', type: 'text' }
+                  { label: 'SendKey', key: 'key', value: getVal('serverchan', 'key') || '未配置', type: 'text' },
+                  { label: '消息标题 (可选)', key: 'title', value: getVal('serverchan', 'title') || '可选, 自定义消息标题', type: 'text' }
               ],
               previewBg: '#fff5f5', previewColor: '#e53935' },
         ];
 
-        function buildField(f) {
+        function buildField(f, section, key) {
+            var input = E('input', {
+                'type': f.type,
+                'value': f.value,
+                'style': 'width:100%;padding:8px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;font-size:.82em;color:#374151;box-sizing:border-box'
+            });
+            input.addEventListener('change', function() {
+                uci.set('eventcenter', section, key, this.value);
+            });
             return E('div', { 'style': 'margin-bottom:10px' }, [
                 E('label', { 'style': 'font-size:.78em;color:#6b7280;margin-bottom:3px;display:block' }, [f.label]),
-                E('input', {
-                    'type': f.type,
-                    'value': f.value,
-                    'readonly': '',
-                    'style': 'width:100%;padding:8px 10px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;font-size:.82em;color:#374151;box-sizing:border-box'
-                })
+                input
             ]);
         }
 
@@ -100,7 +103,7 @@ return view.extend({
 
             var fieldsEl = E('div', { 'style': 'flex:1;min-width:0' });
             ch.fields.forEach(function(f) {
-                fieldsEl.appendChild(buildField(f));
+                fieldsEl.appendChild(buildField(f, ch.id, f.key));
             });
 
             // 所有渠道统一用 eventcenter test 测试
@@ -119,6 +122,27 @@ return view.extend({
                 }
             }, ['发送测试']);
 
+            // 开关元素（带点击事件）
+            var statusEl = E('span', { 'style': 'font-size:.8em;color:' + statusColor + ';display:flex;align-items:center;gap:4px' }, [
+                E('span', { 'style': 'width:7px;height:7px;border-radius:50%;background:' + statusColor + ';display:inline-block' }),
+                statusText
+            ]);
+            var toggleDot = E('div', { 'style': 'width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;' + (on ? 'right:2px' : 'left:2px') + ';box-shadow:0 1px 3px rgba(0,0,0,.2);transition:all .2s' });
+            var toggleEl = E('div', { 'style': 'width:40px;height:22px;border-radius:11px;background:' + toggleBg + ';position:relative;cursor:pointer;transition:background .2s' }, [toggleDot]);
+            toggleEl.addEventListener('click', function() {
+                var currentlyOn = getVal(ch.id, 'enable') === '1';
+                var newVal = currentlyOn ? '0' : '1';
+                uci.set('eventcenter', ch.id, 'enable', newVal);
+                // 更新视觉
+                var newOn = newVal === '1';
+                toggleEl.style.background = newOn ? '#7c3aed' : '#d1d5db';
+                toggleDot.style[newOn ? 'right' : 'left'] = '2px';
+                toggleDot.style[newOn ? 'left' : 'right'] = 'auto';
+                statusEl.querySelector('span').style.background = newOn ? '#22c55e' : '#9ca3af';
+                statusEl.childNodes[1].textContent = newOn ? '已启用' : '未启用';
+                statusEl.style.color = newOn ? '#22c55e' : '#9ca3af';
+            });
+
             return E('div', { 'style': 'background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:12px' }, [
                 E('div', { 'style': 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px' }, [
                     E('div', { 'style': 'display:flex;align-items:center;gap:10px' }, [
@@ -126,13 +150,8 @@ return view.extend({
                         E('strong', { 'style': 'font-size:1em;color:#1f2937' }, [ch.label]),
                     ]),
                     E('div', { 'style': 'display:flex;align-items:center;gap:10px' }, [
-                        E('span', { 'style': 'font-size:.8em;color:' + statusColor + ';display:flex;align-items:center;gap:4px' }, [
-                            E('span', { 'style': 'width:7px;height:7px;border-radius:50%;background:' + statusColor + ';display:inline-block' }),
-                            statusText
-                        ]),
-                        E('div', { 'style': 'width:40px;height:22px;border-radius:11px;background:' + toggleBg + ';position:relative;cursor:pointer' }, [
-                            E('div', { 'style': 'width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;' + (on ? 'right:2px' : 'left:2px') + ';box-shadow:0 1px 3px rgba(0,0,0,.2)' })
-                        ]),
+                        statusEl,
+                        toggleEl,
                     ])
                 ]),
                 E('div', { 'style': 'display:flex;gap:20px;align-items:stretch' }, [
@@ -164,11 +183,39 @@ return view.extend({
         container.appendChild(E('div',{'class':'ec-footer'},'EventCenter v1.0.0 | 让每一次事件，都被及时发现和处理'));
 
         // 底部操作栏
-        var actionsBar = E('div', { 'class': 'cbi-page-actions' }, [
-            E('button', { 'class': 'cbi-button cbi-button-apply' }, '保存并应用'),
-            E('button', { 'class': 'cbi-button cbi-button-save' }, '保存'),
-            E('button', { 'class': 'cbi-button cbi-button-reset' }, '复位')
-        ]);
+        var saveApplyBtn = E('button', { 'class': 'cbi-button cbi-button-apply' }, '保存并应用');
+        var saveBtn = E('button', { 'class': 'cbi-button cbi-button-save' }, '保存');
+        var resetBtn = E('button', { 'class': 'cbi-button cbi-button-reset' }, '复位');
+
+        saveApplyBtn.addEventListener('click', function() {
+            var b = this; b.textContent = '保存中...'; b.disabled = true;
+            uci.save().then(function() { return uci.apply(); }).then(function() {
+                b.textContent = '重启中...';
+                return fs.exec('/etc/init.d/eventcenter', ['restart']);
+            }).then(function(r) {
+                b.textContent = (r && r.code === 0) ? '✓ 已完成' : '✓ 已保存';
+                b.style.background = '#22c55e';
+                setTimeout(function() { b.textContent = '保存并应用'; b.style.background = ''; b.disabled = false; }, 3000);
+            }).catch(function() {
+                b.textContent = '✗ 失败'; b.style.background = '#dc2626';
+                setTimeout(function() { b.textContent = '保存并应用'; b.style.background = ''; b.disabled = false; }, 3000);
+            });
+        });
+
+        saveBtn.addEventListener('click', function() {
+            var b = this; b.textContent = '保存中...'; b.disabled = true;
+            uci.save().then(function() { return uci.apply(); }).then(function() {
+                b.textContent = '✓ 已保存'; b.style.background = '#22c55e';
+                setTimeout(function() { b.textContent = '保存'; b.style.background = ''; b.disabled = false; }, 2000);
+            }).catch(function() {
+                b.textContent = '✗ 失败'; b.style.background = '#dc2626';
+                setTimeout(function() { b.textContent = '保存'; b.style.background = ''; b.disabled = false; }, 2000);
+            });
+        });
+
+        resetBtn.addEventListener('click', function() { window.location.reload(); });
+
+        var actionsBar = E('div', { 'class': 'cbi-page-actions' }, [saveApplyBtn, saveBtn, resetBtn]);
         container.appendChild(actionsBar);
 
         return container;
