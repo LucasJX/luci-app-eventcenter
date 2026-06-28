@@ -12,14 +12,15 @@ STATE_FILE="/tmp/eventcenter_device_state"
 
 get_all_devices() {
     # Merge DHCP leases + ARP table, deduplicate by MAC
-    # Output: MAC\tIP\tName
+    # Output: MAC	IP	Name
+    # DHCP first (has names), then ARP (no names), dedup keeps first occurrence
     {
         # DHCP leases: MAC IP hostname expiry
         [ -f /tmp/dhcp.leases ] && awk '{
             mac = toupper($2)
             ip = $3
             name = ($4 == "*" ? "" : $4)
-            printf "%s\t%s\t%s\n", mac, ip, name
+            printf "%s	%s	%s\n", mac, ip, name
         }' /tmp/dhcp.leases
 
         # ARP table: IP HWType Flags HWAddr Mask Device
@@ -27,9 +28,9 @@ get_all_devices() {
         awk 'NR > 1 && $3 == "0x2" && $4 ~ /^[0-9a-fA-F:]+$/ && $4 != "00:00:00:00:00:00" {
             mac = toupper($4)
             ip = $1
-            printf "%s\t%s\t\n", mac, ip
+            printf "%s	%s	\n", mac, ip
         }' /proc/net/arp 2>/dev/null
-    } | sort -t'	' -k1,1 -u
+    } | awk -F'	' '$3!=""{if(!seen[$1]++){print;next}} !seen[$1]++'
 }
 
 # --- Resolve device name ---
