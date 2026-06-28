@@ -8,7 +8,7 @@
 ;(function(){if(document.getElementById('ec-dark-css'))return;var lk=document.createElement('link');lk.id='ec-dark-css';lk.rel='stylesheet';lk.href='/luci-static/resources/eventcenter/ec-dark.css';document.head.appendChild(lk);function ck(){var bg=getComputedStyle(document.body).backgroundColor;var m=bg.match(/rgb[a]?\((\d+),\s*(\d+),\s*(\d+)/);var dk=m&&((parseInt(m[1])+parseInt(m[2])+parseInt(m[3]))/3<80);if(dk||document.cookie.indexOf('argonDarkMode=1')>-1||window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.classList.add('ec-dark');else document.documentElement.classList.remove('ec-dark')}ck();window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',ck)})();
 
 /* ── 页面头部组件 ── */
-if(!document.getElementById('ec-hdr-css')){var hs=document.createElement('style');hs.id='ec-hdr-css';hs.textContent='.ec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:14px}.ec-hdr-left h2{margin:0 0 4px;font-size:1.2em;font-weight:700;color:#1f2937}.ec-hdr-left p{margin:0;font-size:.82em;color:#9ca3af}.ec-hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ec-hdr-top{display:flex;align-items:center;gap:8px}.ec-hdr-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}.ec-hdr-status{font-size:.82em;font-weight:500;color:#1f2937}.ec-hdr-bottom{display:flex;align-items:center;gap:6px}.ec-hdr-time{font-size:.78em;color:#9ca3af}.ec-hdr-refresh{background:none;border:none;cursor:pointer;font-size:1em;color:#9ca3af;padding:2px;border-radius:4px;transition:all .15s}.ec-hdr-refresh:hover{background:#f3f4f6;color:#374151}';document.head.appendChild(hs)}
+if(!document.getElementById('ec-hdr-css')){var hs=document.createElement('style');hs.id='ec-hdr-css';hs.textContent='.ec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:14px}.ec-hdr-left h2{margin:0 0 4px;font-size:1.2em;font-weight:700;color:#1f2937}.ec-hdr-left p{margin:0;font-size:.82em;color:#9ca3af}.ec-hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ec-hdr-top{display:flex;align-items:center;gap:8px}.ec-hdr-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}.ec-hdr-status{font-size:.82em;font-weight:500;color:#1f2937}.ec-hdr-bottom{display:flex;align-items:center;gap:6px}.ec-hdr-time{font-size:.78em;color:#9ca3af}.ec-hdr-refresh{background:none;border:none;cursor:pointer;font-size:1em;color:#9ca3af;padding:2px;border-radius:4px;transition:all .15s}.ec-hdr-refresh:hover{background:#f3f4f6;color:#374151}.ec-actions-bar{display:flex;justify-content:flex-end;gap:0;padding:16px 0;margin-top:16px}.ec-actions-bar .cbi-button{margin-left:8px}.ec-actions-bar .cbi-button:first-child{margin-left:0}.ec-actions-bar .cbi-button-save{background:darkolivegreen!important;border-color:darkolivegreen!important}.ec-actions-bar .cbi-button-action{background:darkorange!important;border-color:darkorange!important}';document.head.appendChild(hs)}
 function ecMakeHdr(title,subtitle,isRunning){var h=document.createElement('div');h.className='ec-hdr';h.innerHTML='<div class="ec-hdr-left"><h2>'+title+'</h2><p>'+subtitle+'</p></div><div class="ec-hdr-right"><div class="ec-hdr-top"><span class="ec-hdr-dot" style="background:'+(isRunning?'#22c55e':'#ef4444')+'"></span><span class="ec-hdr-status">'+(isRunning?'运行中':'已停止')+'</span></div><div class="ec-hdr-bottom"><span class="ec-hdr-time">最后更新: '+new Date().toLocaleString('zh-CN')+'</span><button class="ec-hdr-refresh" title="刷新">⟳</button></div></div>';h.querySelector('.ec-hdr-refresh').addEventListener('click',function(){window.location.reload()});return h}
 
 /* ── 设置页专属 CSS ── */
@@ -240,9 +240,9 @@ return view.extend({
 		});
 
 		// 操作栏
-		var saveBtn = E('button', { 'class': 'ec-btn ec-btn-primary' }, '保存');
-		var restartBtn = E('button', { 'class': 'ec-btn ec-btn-warning' }, '保存并重启');
-		var resetBtn = E('button', { 'class': 'ec-btn ec-btn-ghost' }, '重置');
+		var applyBtn = E('button', { 'class': 'cbi-button cbi-button-apply' }, '保存并应用');
+		var saveBtn = E('button', { 'class': 'cbi-button cbi-button-save' }, '保存');
+		var resetBtn = E('button', { 'class': 'cbi-button cbi-button-action' }, '复位');
 
 		saveBtn.addEventListener('click', function() {
 			// 应用本地值到 UCI
@@ -263,25 +263,22 @@ return view.extend({
 			});
 		});
 
-		restartBtn.addEventListener('click', function() {
-			// 先保存再重启
+		applyBtn.addEventListener('click', function() {
+			// 先保存再应用
 			Object.keys(localValues).forEach(function(key) {
 				var parts = key.split('.');
 				uci.set('eventcenter', parts[0], parts[1], localValues[key]);
 			});
-			restartBtn.textContent = '保存中...';
-			restartBtn.disabled = true;
+			applyBtn.textContent = '保存中...';
+			applyBtn.disabled = true;
 			uci.save().then(function() { return uci.apply(); }).then(function() {
-				restartBtn.textContent = '重启中...';
-				return fs.exec('/etc/init.d/eventcenter', ['restart']);
-			}).then(function(res) {
-				restartBtn.textContent = (res && res.code === 0) ? '✓ 已完成' : '✓ 已保存';
-				restartBtn.style.background = '#22c55e';
-				setTimeout(function() { restartBtn.textContent = '保存并重启'; restartBtn.style.background = ''; restartBtn.disabled = false; }, 3000);
+				applyBtn.textContent = '✓ 已完成';
+				applyBtn.style.background = '#22c55e';
+				setTimeout(function() { applyBtn.textContent = '保存并应用'; applyBtn.style.background = ''; applyBtn.disabled = false; }, 2000);
 			}).catch(function() {
-				restartBtn.textContent = '✗ 失败';
-				restartBtn.style.background = '#dc2626';
-				setTimeout(function() { restartBtn.textContent = '保存并重启'; restartBtn.style.background = ''; restartBtn.disabled = false; }, 3000);
+				applyBtn.textContent = '✗ 失败';
+				applyBtn.style.background = '#dc2626';
+				setTimeout(function() { applyBtn.textContent = '保存并应用'; applyBtn.style.background = ''; applyBtn.disabled = false; }, 2000);
 			});
 		});
 
@@ -289,7 +286,7 @@ return view.extend({
 			window.location.reload();
 		});
 
-		var actionsBar = E('div', { 'class': 'ec-actions-bar' }, [resetBtn, saveBtn, restartBtn]);
+		var actionsBar = E('div', { 'class': 'ec-actions-bar' }, [resetBtn, saveBtn, applyBtn]);
 
 		// 组装页面
 		var container = E('div', {}, [
