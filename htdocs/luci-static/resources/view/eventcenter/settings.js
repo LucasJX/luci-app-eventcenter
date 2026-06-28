@@ -43,7 +43,8 @@ function ecMakeHdr(title,subtitle,isRunning){var h=document.createElement('div')
 		'.ec-toggle{width:42px;height:24px;border-radius:12px;background:#d1d5db;position:relative;cursor:pointer;transition:background .2s}',
 		'.ec-toggle.on{background:#7c3aed}',
 		'.ec-toggle::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}',
-		'.ec-toggle.on::after{transform:translateX(18px)}'
+		'.ec-toggle.on::after{transform:translateX(18px)}',
+		'@media(max-width:768px){.ec-settings-grid{grid-template-columns:1fr!important}.ec-settings-body{grid-template-columns:1fr!important}}'
 	].join('\n');
 	document.head.appendChild(s);
 })();

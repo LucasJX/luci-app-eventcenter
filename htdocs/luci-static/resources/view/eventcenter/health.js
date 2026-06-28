@@ -51,7 +51,8 @@ function ecMakeHdr(title,subtitle,isRunning){var h=document.createElement('div')
 		'.ec-delay-mid{color:#d97706;font-weight:600}',
 		'.ec-delay-bad{color:#dc2626;font-weight:600}',
 
-		'.ec-muted{color:#9ca3af}'
+		'.ec-muted{color:#9ca3af}',
+		'@media(max-width:768px){.ec-panel-body{overflow-x:auto;-webkit-overflow-scrolling:touch}.ec-tbl{min-width:600px}}'
 	].join('\n');
 	document.head.appendChild(s);
 })();
