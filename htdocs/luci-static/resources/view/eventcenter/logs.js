@@ -102,6 +102,6 @@ return view.extend({
 		});
 		var pageActions = E('div', { 'class': 'ec-actions' }, [restartBtn]);
 
-		return E('div', {}, [content, pageActions]);
+		return E('div', {}, [content, pageActions, E('div',{'class':'ec-footer'},'EventCenter v1.0.0 | 让每一次事件，都被及时发现和处理')]);
 	},
 });

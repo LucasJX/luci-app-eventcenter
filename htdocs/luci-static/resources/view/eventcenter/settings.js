@@ -293,7 +293,8 @@ return view.extend({
 		var container = E('div', {}, [
 			ecMakeHdr('设置', '配置事件中心监控和通知系统', isRunning),
 			grid,
-			actionsBar
+			actionsBar,
+			E('div',{'class':'ec-footer'},'EventCenter v1.0.0 | 让每一次事件，都被及时发现和处理')
 		]);
 
 		return container;

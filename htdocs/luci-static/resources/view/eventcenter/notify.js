@@ -164,6 +164,8 @@ return view.extend({
             container.appendChild(buildCard(ch));
         });
 
+        container.appendChild(E('div',{'class':'ec-footer'},'EventCenter v1.0.0 | 让每一次事件，都被及时发现和处理'));
+
         return container;
     },
 

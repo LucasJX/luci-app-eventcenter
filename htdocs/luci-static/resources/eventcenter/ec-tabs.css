@@ -45,3 +45,9 @@ ul.tabs > li[class~="active"] > a {
   border-color: #7c3aed !important;
   box-shadow: 0 2px 8px rgba(124, 58, 237, .25) !important;
 }
+.ec-footer {
+  text-align: center;
+  padding: 16px;
+  font-size: .75em;
+  color: #d1d5db;
+}
