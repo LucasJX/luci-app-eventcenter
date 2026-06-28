@@ -27,14 +27,14 @@ return view.extend({
         }
 
         var channels = [
-            { id: 'telegram', label: 'Telegram', icon: '✈️', color: '#0088cc',
+            { id: 'telegram', section: 'telegram', label: 'Telegram', icon: '✈️', color: '#0088cc',
               fields: [
                   { label: 'Bot Token', key: 'bot_token', value: getVal('telegram', 'bot_token') || '未配置', type: 'password' },
                   { label: 'Chat ID', key: 'chat_id', value: getVal('telegram', 'chat_id') || '未配置', type: 'password' },
                   { label: '消息格式', key: 'parse_mode', value: getVal('telegram', 'parse_mode') || 'Markdown', type: 'text' }
               ],
               previewBg: '#e3f2fd', previewColor: '#1976d2' },
-            { id: 'ntfy', label: 'Ntfy', icon: '🔔', color: '#4caf50',
+            { id: 'ntfy', section: 'ntfy', label: 'Ntfy', icon: '🔔', color: '#4caf50',
               fields: [
                   { label: '服务器地址', key: 'url', value: getVal('ntfy', 'url') || '未配置', type: 'text' },
                   { label: '主题', key: 'topic', value: getVal('ntfy', 'topic') || '未配置', type: 'text' },
@@ -42,23 +42,23 @@ return view.extend({
                   { label: '密码', key: 'pass', value: getVal('ntfy', 'pass') ? '••••••••' : '未配置', type: 'password' }
               ],
               previewBg: '#e8f5e9', previewColor: '#2e7d32' },
-            { id: 'wecom', label: '企业微信', icon: '💬', color: '#07c160',
+            { id: 'wecom', section: 'wechat', label: '企业微信', icon: '💬', color: '#07c160',
               fields: [
                   { label: 'Webhook URL', key: 'webhook', value: getVal('wechat', 'webhook') || '未配置', type: 'text' }
               ],
               previewBg: '#f0fdf4', previewColor: '#07c160' },
-            { id: 'bark', label: 'Bark', icon: '🔔', color: '#ff3b30',
+            { id: 'bark', section: 'bark', label: 'Bark', icon: '🔔', color: '#ff3b30',
               fields: [
                   { label: '服务器地址', key: 'server', value: getVal('bark', 'server') || '未配置', type: 'text' },
                   { label: '推送 Key', key: 'key', value: getVal('bark', 'key') || '未配置', type: 'password' }
               ],
               previewBg: '#fff3f0', previewColor: '#ff3b30' },
-            { id: 'pushplus', label: 'PushPlus', icon: '➕', color: '#00bcd4',
+            { id: 'pushplus', section: 'pushplus', label: 'PushPlus', icon: '➕', color: '#00bcd4',
               fields: [
                   { label: 'Token', key: 'token', value: getVal('pushplus', 'token') || '未配置', type: 'text' }
               ],
               previewBg: '#e0f7fa', previewColor: '#00acc1' },
-            { id: 'serverchan', label: 'Server酱', icon: '📮', color: '#ff6b6b',
+            { id: 'serverchan', section: 'serverchan', label: 'Server酱', icon: '📮', color: '#ff6b6b',
               fields: [
                   { label: 'SendKey', key: 'key', value: getVal('serverchan', 'key') || '未配置', type: 'text' },
                   { label: '消息标题 (可选)', key: 'title', value: getVal('serverchan', 'title') || '可选, 自定义消息标题', type: 'text' }
@@ -103,7 +103,7 @@ return view.extend({
 
             var fieldsEl = E('div', { 'style': 'flex:1;min-width:0' });
             ch.fields.forEach(function(f) {
-                fieldsEl.appendChild(buildField(f, ch.id, f.key));
+                fieldsEl.appendChild(buildField(f, ch.section, f.key));
             });
 
             // 所有渠道统一用 eventcenter test 测试
@@ -122,25 +122,23 @@ return view.extend({
                 }
             }, ['发送测试']);
 
-            // 开关元素（带点击事件）
+            // 开关元素（用本地变量追踪状态，不依赖 getVal 快照）
+            var currentOn = on;
             var statusEl = E('span', { 'style': 'font-size:.8em;color:' + statusColor + ';display:flex;align-items:center;gap:4px' }, [
                 E('span', { 'style': 'width:7px;height:7px;border-radius:50%;background:' + statusColor + ';display:inline-block' }),
                 statusText
             ]);
-            var toggleDot = E('div', { 'style': 'width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;' + (on ? 'right:2px' : 'left:2px') + ';box-shadow:0 1px 3px rgba(0,0,0,.2);transition:all .2s' });
+            var toggleDot = E('div', { 'style': 'width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;' + (currentOn ? 'right:2px' : 'left:2px') + ';box-shadow:0 1px 3px rgba(0,0,0,.2);transition:all .2s' });
             var toggleEl = E('div', { 'style': 'width:40px;height:22px;border-radius:11px;background:' + toggleBg + ';position:relative;cursor:pointer;transition:background .2s' }, [toggleDot]);
             toggleEl.addEventListener('click', function() {
-                var currentlyOn = getVal(ch.id, 'enable') === '1';
-                var newVal = currentlyOn ? '0' : '1';
-                uci.set('eventcenter', ch.id, 'enable', newVal);
-                // 更新视觉
-                var newOn = newVal === '1';
-                toggleEl.style.background = newOn ? '#7c3aed' : '#d1d5db';
-                toggleDot.style[newOn ? 'right' : 'left'] = '2px';
-                toggleDot.style[newOn ? 'left' : 'right'] = 'auto';
-                statusEl.querySelector('span').style.background = newOn ? '#22c55e' : '#9ca3af';
-                statusEl.childNodes[1].textContent = newOn ? '已启用' : '未启用';
-                statusEl.style.color = newOn ? '#22c55e' : '#9ca3af';
+                currentOn = !currentOn;
+                uci.set('eventcenter', ch.section, 'enable', currentOn ? '1' : '0');
+                toggleEl.style.background = currentOn ? '#7c3aed' : '#d1d5db';
+                toggleDot.style[currentOn ? 'right' : 'left'] = '2px';
+                toggleDot.style[currentOn ? 'left' : 'right'] = 'auto';
+                statusEl.querySelector('span').style.background = currentOn ? '#22c55e' : '#9ca3af';
+                statusEl.childNodes[1].textContent = currentOn ? '已启用' : '未启用';
+                statusEl.style.color = currentOn ? '#22c55e' : '#9ca3af';
             });
 
             return E('div', { 'style': 'background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:12px' }, [
