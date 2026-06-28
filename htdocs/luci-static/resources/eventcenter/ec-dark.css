@@ -130,3 +130,6 @@
 
 /* ── h2 标题背景（Argon dark.css 设了 background:#333333，覆盖掉）── */
 .ec-dark h2{background:transparent!important}
+
+/* ── 概览页 — 事件图标背景（内联样式覆盖）── */
+.ec-dark .ec-event-icon{background:#252536!important}
