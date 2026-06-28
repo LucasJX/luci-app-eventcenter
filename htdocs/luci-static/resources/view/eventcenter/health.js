@@ -4,26 +4,23 @@
 'require fs';
 'require uci';
 
-/* ── 统一 Tab 菜单样式（v3 — 精简胶囊风格）── */
+/* ── 统一 Tab 菜单样式（v3 — 胶囊风格 + 同步防闪烁）── */
 ;(function(){
 	if(document.getElementById('ec-tab-css-v3'))return;
 	var s=document.createElement('style');s.id='ec-tab-css-v3';
 	s.textContent=[
-		/* 先隐藏 tab，等 CSS 生效后再显示，避免闪烁 */
-		'ul.tabs{visibility:hidden!important;display:flex!important;gap:6px!important;padding:0!important;margin:0 0 16px!important;background:transparent!important;border:none!important;box-shadow:none!important;flex-wrap:wrap!important}',
-		'ul.tabs.ec-ready{visibility:visible!important}',
+		'ul.tabs:not(.ec-ready){visibility:hidden!important}',
+		'ul.tabs.ec-ready{visibility:visible!important;display:flex!important;gap:6px!important;padding:0!important;margin:0 0 16px!important;background:transparent!important;border:none!important;box-shadow:none!important;flex-wrap:wrap!important}',
 		'ul.tabs::before{display:none!important}',
 		'ul.tabs>li{margin:0!important;border:none!important;background:transparent!important;border-radius:0!important}',
-		'ul.tabs>li>a{display:inline-block!important;padding:10px 22px!important;font-size:.88em!important;font-weight:500!important;color:#6b7280!important;text-decoration:none!important;transition:all .2s!important;border-radius:20px!important;background:#f3f4f6!important;border:1px solid transparent!important}',
+		'ul.tabs>li>a{display:inline-block!important;padding:10px 22px!important;font-size:.88em!important;font-weight:500!important;color:#6b7280!important;text-decoration:none!important;transition:all .15s!important;border-radius:20px!important;background:#f3f4f6!important;border:1px solid transparent!important}',
 		'ul.tabs>li>a:hover{color:#7c3aed!important;background:#ede9fe!important}',
 		'ul.tabs>li.active>a,ul.tabs>li[class~="active"]>a{color:#fff!important;background:#7c3aed!important;font-weight:600!important;border-color:#7c3aed!important;box-shadow:0 2px 8px rgba(124,58,237,.25)!important}'
 	].join('\n');
 	document.head.appendChild(s);
-	/* CSS 注入完成后立即显示 tab */
-	requestAnimationFrame(function(){
-		var tabs=document.querySelectorAll('ul.tabs');
-		for(var i=0;i<tabs.length;i++) tabs[i].classList.add('ec-ready');
-	});
+	/* 同步标记已有 tab，避免异步延迟导致闪烁 */
+	var tabs=document.querySelectorAll('ul.tabs');
+	for(var i=0;i<tabs.length;i++) tabs[i].classList.add('ec-ready');
 })();
 
 /* ── 页面头部组件 ── */
